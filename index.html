@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PNA JHB — Franchise Orders</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f3ef; --card: #fff; --border: #e2ddd6;
+  --text: #1a1714; --muted: #7a756e; --accent: #c8402a;
+  --accent-light: #fdf0ed; --accent-dark: #9e3220;
+  --green: #2a7a4b; --green-light: #edf7f2;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "DM Sans", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+/* Header */
+header { background: var(--text); color: #fff; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; height: 52px; position: sticky; top: 0; z-index: 100; }
+.logo { font-size: 15px; font-weight: 600; letter-spacing: .04em; }
+.logo span { color: var(--accent); }
+.submit-header-btn { background: var(--green); color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.submit-header-btn:disabled { opacity: .4; cursor: default; }
+
+/* Controls bar */
+.controls { background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.search-wrap { position: relative; flex: 1; min-width: 160px; }
+.search-wrap input { width: 100%; padding: 8px 10px 8px 32px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; background: var(--bg); color: var(--text); outline: none; }
+.search-wrap input:focus { border-color: var(--accent); }
+.search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--muted); pointer-events: none; }
+select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; background: var(--bg); color: var(--text); outline: none; cursor: pointer; }
+select:focus { border-color: var(--accent); }
+.clear-btn { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; font-family: inherit; background: none; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.clear-btn:hover { color: var(--accent); border-color: var(--accent); }
+.results-bar { padding: 7px 16px; font-size: 12px; color: var(--muted); background: var(--bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.order-summary-bar { font-size: 12px; font-weight: 500; color: var(--green); }
+
+/* Franchise name bar */
+.fname-bar { background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+.fname-bar label { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; text-transform: uppercase; letter-spacing: .05em; }
+.fname-bar input { flex: 1; max-width: 280px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; }
+.fname-bar input:focus { border-color: var(--accent); }
+
+/* Table */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead { background: var(--card); position: sticky; top: 52px; z-index: 50; }
+th { padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border-bottom: 2px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
+th:hover { color: var(--text); }
+th.sorted { color: var(--accent); }
+th .sort-arrow { margin-left: 3px; font-size: 10px; }
+td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:hover td { background: #faf9f7; }
+tr.has-qty td { background: #f0faf4; }
+tr.has-qty:hover td { background: #e8f7ee; }
+
+.col-code { font-family: "DM Mono", monospace; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.col-name { font-weight: 500; min-width: 180px; }
+.col-price { font-family: "DM Mono", monospace; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.col-rrp { font-family: "DM Mono", monospace; color: var(--muted); white-space: nowrap; }
+.col-qty { width: 90px; }
+.col-img { width: 40px; }
+
+.product-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; background: var(--bg); display: block; border: 1px solid var(--border); }
+.product-thumb-ph { width: 36px; height: 36px; border-radius: 6px; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; border: 1px solid var(--border); }
+
+.qty-input { width: 72px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 7px; font-size: 14px; font-family: "DM Mono", monospace; text-align: center; background: var(--bg); outline: none; color: var(--text); }
+.qty-input:focus { border-color: var(--accent); background: #fff; }
+.qty-input.has-val { border-color: var(--green); background: var(--green-light); font-weight: 600; color: var(--green); }
+
+.empty-row td { text-align: center; padding: 48px; color: var(--muted); }
+
+/* Submit modal */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 300; align-items: flex-end; justify-content: center; }
+.overlay.open { display: flex; }
+@media(min-width:600px){ .overlay { align-items: center; } }
+.modal { background: var(--card); border-radius: 16px 16px 0 0; width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; padding: 20px; }
+@media(min-width:600px){ .modal { border-radius: 16px; } }
+.modal-close { float: right; background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted); }
+.modal-h { font-size: 17px; font-weight: 600; margin-bottom: 14px; }
+.order-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.order-line:last-of-type { border-bottom: none; }
+.order-line-name { font-weight: 500; }
+.order-line-sub { font-size: 11px; color: var(--muted); font-family: "DM Mono", monospace; }
+.order-line-price { font-family: "DM Mono", monospace; font-weight: 600; color: var(--accent); white-space: nowrap; margin-left: 10px; }
+.order-total { display: flex; justify-content: space-between; padding: 13px 0 0; font-size: 15px; font-weight: 600; border-top: 2px solid var(--text); margin-top: 8px; }
+.confirm-btn { width: 100%; padding: 13px; background: var(--green); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 14px; }
+.confirm-btn:disabled { opacity: .5; cursor: default; }
+.success-box { background: var(--green-light); color: var(--green); border-radius: 10px; padding: 16px; text-align: center; font-size: 14px; font-weight: 500; display: none; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PNA<span>JHB</span> Orders</div>
+  <button class="submit-header-btn" id="submit-btn" disabled onclick="openSubmit()">Submit order</button>
+</header>
+
+<div class="fname-bar">
+  <label>Franchise</label>
+  <input type="text" id="fname" placeholder="Enter your franchise name" />
+</div>
+
+<div class="controls">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search" placeholder="Search by name or code..." oninput="render()">
+  </div>
+  <select id="sort" onchange="render()">
+    <option value="name-asc">Name A–Z</option>
+    <option value="name-desc">Name Z–A</option>
+    <option value="code-asc">Code ↑</option>
+    <option value="code-desc">Code ↓</option>
+    <option value="price-asc">Price ↑</option>
+    <option value="price-desc">Price ↓</option>
+  </select>
+  <button class="clear-btn" onclick="clearAll()">Clear all qty</button>
+</div>
+
+<div class="results-bar">
+  <span id="results-count">125 products</span>
+  <span class="order-summary-bar" id="order-summary"></span>
+</div>
+
+<div class="tbl-wrap">
+  <table id="main-table">
+    <thead>
+      <tr>
+        <th class="col-img"></th>
+        <th onclick="sortBy('code')">Code <span class="sort-arrow" id="arr-code"></span></th>
+        <th onclick="sortBy('name')">Description <span class="sort-arrow" id="arr-name">↑</span></th>
+        <th onclick="sortBy('price')">Sell price <span class="sort-arrow" id="arr-price"></span></th>
+        <th onclick="sortBy('rrp')">RRP <span class="sort-arrow" id="arr-rrp"></span></th>
+        <th class="col-qty">Qty</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<!-- Submit modal -->
+<div class="overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-h">Confirm order</div>
+    <div id="modal-body"></div>
+    <button class="confirm-btn" id="confirm-btn" onclick="confirmOrder()">Confirm &amp; submit</button>
+    <div class="success-box" id="success-box">✅ Order submitted! We'll contact you shortly.</div>
+  </div>
+</div>
+
+<script>
+const PRODUCTS = [{"id": "35730450", "code": "35730450", "name": "BEADS 4 SIZE MET ASST", "price": 9.72, "rrp": 31.59, "image": ""}, {"id": "35730447", "code": "35730447", "name": "BEADS BELLS 6 SIZES MET ASST", "price": 8.79, "rrp": 31.59, "image": ""}, {"id": "35730283", "code": "35730283", "name": "BEADS DISCO BALL 20MM WHT ROUND", "price": 6.75, "rrp": 21.99, "image": ""}, {"id": "35730299", "code": "35730299", "name": "BEADS FLOWRS MATTE MIX COLS", "price": 6.84, "rrp": 18.99, "image": ""}, {"id": "35730298", "code": "35730298", "name": "BEADS FLWR 4PETALS MIX COLS", "price": 6.84, "rrp": 21.99, "image": ""}, {"id": "35730301", "code": "35730301", "name": "BEADS MIX SET FLWRS/HRTS/FISH/BUN", "price": 8.22, "rrp": 21.99, "image": ""}, {"id": "35730275", "code": "35730275", "name": "BEADS NATURAL 17MM T39-4(6S)", "price": 8.22, "rrp": 21.99, "image": ""}, {"id": "35730276", "code": "35730276", "name": "BEADS NATURAL 22MM T39-4(4S)", "price": 8.22, "rrp": 24.99, "image": ""}, {"id": "35730273", "code": "35730273", "name": "BEADS NATURAL 8MM T39-4", "price": 8.22, "rrp": 24.59, "image": ""}, {"id": "35730272", "code": "35730272", "name": "BEADS NATURAL T39-4 10MM", "price": 8.22, "rrp": 24.59, "image": ""}, {"id": "35730294", "code": "35730294", "name": "BEADS OVAL 10MM PEARLS MIX COL", "price": 7.74, "rrp": 21.99, "image": ""}, {"id": "35730288", "code": "35730288", "name": "BEADS ROUND 10MM CRINKLE MIX COL", "price": 7.74, "rrp": 21.99, "image": ""}, {"id": "35730360", "code": "35730360", "name": "BEADS ROUND 10MM PEARL WHT 12S", "price": 7.49, "rrp": 23.99, "image": ""}, {"id": "35730368", "code": "35730368", "name": "BEADS ROUND 15MM CLEAR ASST", "price": 7.77, "rrp": 23.59, "image": ""}, {"id": "35730295", "code": "35730295", "name": "BEADS ROUND 8MM PEARLS MIX COL", "price": 9.91, "rrp": 21.99, "image": ""}, {"id": "35730407", "code": "35730407", "name": "BEADS ROUND GLD 5MM 90S", "price": 8.22, "rrp": 21.99, "image": ""}, {"id": "35730270", "code": "35730270", "name": "CRAFT COLOUR BEADS 8MMT39-4", "price": 8.22, "rrp": 21.99, "image": ""}, {"id": "35730032", "code": "35730032", "name": "CRAFT FEATHERS 12-13CM ASST", "price": 7.49, "rrp": 24.99, "image": ""}, {"id": "35730064", "code": "35730064", "name": "CRAFT FEATHERS 12-13CM GRN", "price": 7.74, "rrp": 24.99, "image": ""}, {"id": "35730657", "code": "35730657", "name": "CRAFT FEATHERS 12-13CM L/BRN", "price": 7.74, "rrp": 24.99, "image": ""}, {"id": "35730654", "code": "35730654", "name": "CRAFT FEATHERS 12-13CM L/GRN", "price": 7.74, "rrp": 24.99, "image": ""}, {"id": "35730063", "code": "35730063", "name": "CRAFT FEATHERS 12-13CM ORG", "price": 7.74, "rrp": 24.99, "image": ""}, {"id": "35730057", "code": "35730057", "name": "CRAFT FEATHERS 12-13CM PNK", "price": 7.64, "rrp": 24.99, "image": ""}, {"id": "35730060", "code": "35730060", "name": "CRAFT FEATHERS 12-13CM TURQ", "price": 7.19, "rrp": 24.99, "image": ""}, {"id": "35730058", "code": "35730058", "name": "CRAFT FEATHERS 12-13CM YEL", "price": 9.87, "rrp": 24.99, "image": ""}, {"id": "35730062", "code": "35730062", "name": "CRAFT FEATHERS 12-14CM BRN", "price": 7.74, "rrp": 24.99, "image": ""}, {"id": "35730035", "code": "35730035", "name": "CRAFT FEATHERS 17-20CM MI", "price": 8.22, "rrp": 24.99, "image": ""}, {"id": "35730648", "code": "35730648", "name": "CRAFT FEATHERS 20-22CM BRN 12S", "price": 9.87, "rrp": 24.99, "image": ""}, {"id": "35730472", "code": "35730472", "name": "CRAFT FEATHERS 20-22CM D/BRN 12S", "price": 7.63, "rrp": 24.99, "image": ""}, {"id": "35730471", "code": "35730471", "name": "CRAFT FEATHERS 20-22CM L/PINK 12S", "price": 7.98, "rrp": 24.99, "image": ""}, {"id": "35730473", "code": "35730473", "name": "CRAFT FEATHERS 20-22CM WH 12S", "price": 7.49, "rrp": 24.99, "image": ""}, {"id": "35730072", "code": "35730072", "name": "CRAFT FEATHERS FINE CERISE", "price": 7.41, "rrp": 24.99, "image": ""}, {"id": "35730026", "code": "35730026", "name": "CRAFT FEATHERS FINE D/GRN", "price": 7.98, "rrp": 24.99, "image": ""}, {"id": "35730068", "code": "35730068", "name": "CRAFT FEATHERS FINE L/GRN", "price": 9.87, "rrp": 24.99, "image": ""}, {"id": "35730069", "code": "35730069", "name": "CRAFT FEATHERS FINE L/PNK", "price": 9.58, "rrp": 24.99, "image": ""}, {"id": "35730070", "code": "35730070", "name": "CRAFT FEATHERS FINE ORG", "price": 9.58, "rrp": 24.99, "image": ""}, {"id": "35730067", "code": "35730067", "name": "CRAFT FEATHERS FINE PUR", "price": 8.11, "rrp": 24.99, "image": ""}, {"id": "35730076", "code": "35730076", "name": "CRAFT FEATHERS FINE RED", "price": 8.22, "rrp": 24.99, "image": ""}, {"id": "35730075", "code": "35730075", "name": "CRAFT FEATHERS FINE TURQUOISE", "price": 7.63, "rrp": 24.99, "image": ""}, {"id": "35730074", "code": "35730074", "name": "CRAFT FEATHERS FINE WHT", "price": 8.22, "rrp": 24.99, "image": ""}, {"id": "35730077", "code": "35730077", "name": "CRAFT FEATHERS FINE YEL", "price": 7.41, "rrp": 24.99, "image": ""}, {"id": "35730487", "code": "35730487", "name": "CRAFT POLYSTRENE KIT BEETLE", "price": 12.61, "rrp": 33.99, "image": ""}, {"id": "35730486", "code": "35730486", "name": "CRAFT POLYSTRENE KIT BUMBLE BEE", "price": 12.61, "rrp": 33.99, "image": ""}, {"id": "35730488", "code": "35730488", "name": "CRAFT POLYSTRENE KIT BUTTERFLY", "price": 12.61, "rrp": 33.99, "image": ""}, {"id": "35730457", "code": "35730457", "name": "CRAFT ROUND PLASTIC 3CM L/BL", "price": 6.96, "rrp": 23.99, "image": ""}, {"id": "35730452", "code": "35730452", "name": "CRAFT ROUND PLASTIC 3CM RED", "price": 7.41, "rrp": 23.99, "image": ""}, {"id": "35730461", "code": "35730461", "name": "CRAFT ROUND PLASTIC 3CM WHT", "price": 7.74, "rrp": 23.99, "image": ""}, {"id": "35730451", "code": "35730451", "name": "CRAFT ROUND PLASTIC 3CM YEL", "price": 7.77, "rrp": 23.99, "image": ""}, {"id": "35730018", "code": "35730018", "name": "CRAFT STICKS COL 10CM 5MM", "price": 8.78, "rrp": 29.99, "image": ""}, {"id": "35730143", "code": "35730143", "name": "CRAFT STICKS COL 9,3X10MM", "price": 6.49, "rrp": 18.99, "image": ""}, {"id": "35730021", "code": "35730021", "name": "CRAFT STICKS COL MATCH 50MM", "price": 5.49, "rrp": 15.99, "image": ""}, {"id": "35730011", "code": "35730011", "name": "CRAFT STICKS I/CRM 140X6 NAT", "price": 6.79, "rrp": 24.99, "image": ""}, {"id": "35730467", "code": "35730467", "name": "CRAFT STICKS I/CRM 6,3X1CM", "price": 6.79, "rrp": 23.99, "image": ""}, {"id": "35730470", "code": "35730470", "name": "CRAFT STICKS I/CRM COL 110MM", "price": 8.72, "rrp": 20.59, "image": ""}, {"id": "35730005", "code": "35730005", "name": "CRAFT STICKS I/CRM COL 50", "price": 4.73, "rrp": 14.0, "image": ""}, {"id": "35730468", "code": "35730468", "name": "CRAFT STICKS I/CRM COL 6CM", "price": 8.49, "rrp": 26.99, "image": ""}, {"id": "35730007", "code": "35730007", "name": "CRAFT STICKS I/CRM NAT 110MM", "price": 4.29, "rrp": 15.99, "image": ""}, {"id": "35730003", "code": "35730003", "name": "CRAFT STICKS I/CRM NAT WIDE", "price": 7.23, "rrp": 26.58, "image": ""}, {"id": "35730013", "code": "35730013", "name": "CRAFT STICKS I/CRM NAT WIDE", "price": 6.79, "rrp": 23.99, "image": ""}, {"id": "35730015", "code": "35730015", "name": "CRAFT STICKS NAT 10CM 5MM", "price": 6.79, "rrp": 23.59, "image": ""}, {"id": "35730017", "code": "35730017", "name": "CRAFT STICKS SOSATIE SHORT", "price": 6.79, "rrp": 23.59, "image": ""}, {"id": "35730280", "code": "35730280", "name": "CRAFT THREAD HOLDER NATURAL 22MM", "price": 7.49, "rrp": 23.99, "image": ""}, {"id": "35730118", "code": "35730118", "name": "CRAFT WOODEN CUBES 20MM 20S", "price": 10.84, "rrp": 36.0, "image": ""}, {"id": "35730330", "code": "35730330", "name": "CRAFT WOODEN INSECTS 6S", "price": 8.71, "rrp": 20.99, "image": ""}, {"id": "35730114", "code": "35730114", "name": "POLYSTYRENE ALPHA 9,5CM A-Z", "price": 23.44, "rrp": 73.99, "image": ""}, {"id": "35730039", "code": "35730039", "name": "POLYSTYRENE BALL 10CM 1S", "price": 4.99, "rrp": 15.99, "image": ""}, {"id": "35730078", "code": "35730078", "name": "POLYSTYRENE BALL 11CM 1S", "price": 6.49, "rrp": 19.99, "image": ""}, {"id": "35730040", "code": "35730040", "name": "POLYSTYRENE BALL 12CM 1S", "price": 10.41, "rrp": 29.99, "image": ""}, {"id": "35730031", "code": "35730031", "name": "POLYSTYRENE BALL 15CM 1S", "price": 8.79, "rrp": 27.99, "image": ""}, {"id": "35730036", "code": "35730036", "name": "POLYSTYRENE BALLS 1CM", "price": 6.58, "rrp": 24.99, "image": ""}, {"id": "35730024", "code": "35730024", "name": "POLYSTYRENE BALLS 2,5CM 40S", "price": 5.41, "rrp": 17.99, "image": ""}, {"id": "35730023", "code": "35730023", "name": "POLYSTYRENE BALLS 2CM Y-018", "price": 6.29, "rrp": 24.99, "image": ""}, {"id": "35730037", "code": "35730037", "name": "POLYSTYRENE BALLS 3,5CM 15S", "price": 5.41, "rrp": 17.99, "image": ""}, {"id": "35730025", "code": "35730025", "name": "POLYSTYRENE BALLS 3CM 30S", "price": 8.57, "rrp": 27.99, "image": ""}, {"id": "35730027", "code": "35730027", "name": "POLYSTYRENE BALLS 4CM 8S", "price": 5.41, "rrp": 19.99, "image": ""}, {"id": "35730020", "code": "35730020", "name": "POLYSTYRENE BALLS 6CM 6S", "price": 6.29, "rrp": 24.99, "image": ""}, {"id": "35730029", "code": "35730029", "name": "POLYSTYRENE BALLS 8CM 3S", "price": 5.41, "rrp": 19.99, "image": ""}, {"id": "35730349", "code": "35730349", "name": "POLYSTYRENE FLAT CIRCLE 12CM", "price": 8.22, "rrp": 24.99, "image": ""}, {"id": "35730469", "code": "35730469", "name": "POLYSTYRENE FRAMES 30X22/20X16 2P", "price": 10.06, "rrp": 30.99, "image": ""}, {"id": "35730041", "code": "35730041", "name": "POLYSTYRENE HALF CIRCLES 3CM", "price": 5.99, "rrp": 19.99, "image": ""}, {"id": "35730257", "code": "35730257", "name": "POLYSTYRENE HEARTS 4S", "price": 7.19, "rrp": 24.99, "image": ""}, {"id": "35730048", "code": "35730048", "name": "POLYSTYRENE HEARTS 5S", "price": 6.75, "rrp": 24.99, "image": ""}, {"id": "35730047", "code": "35730047", "name": "POLYSTYRENE HEARTS 8S", "price": 7.83, "rrp": 23.99, "image": ""}, {"id": "35730135", "code": "35730135", "name": "POLYSTYRENE LOOPS 11CM 3S", "price": 6.75, "rrp": 24.99, "image": ""}, {"id": "35730043", "code": "35730043", "name": "POLYSTYRENE LOOPS 15CM 2S", "price": 7.49, "rrp": 24.99, "image": ""}, {"id": "35730079", "code": "35730079", "name": "POLYSTYRENE LOOPS ASST 3S", "price": 8.22, "rrp": 24.99, "image": ""}, {"id": "35730049", "code": "35730049", "name": "POLYSTYRENE SQUARES 4CM 8S", "price": 7.88, "rrp": 25.99, "image": ""}, {"id": "35730045", "code": "35730045", "name": "POLYSTYRENE STARS 6S", "price": 8.22, "rrp": 26.99, "image": ""}, {"id": "35730046", "code": "35730046", "name": "POLYSTYRENE STARS WITH HOLE 6S", "price": 7.85, "rrp": 26.99, "image": ""}, {"id": "35730050", "code": "35730050", "name": "POLYSTYRENE TUBE 12S", "price": 6.75, "rrp": 25.99, "image": ""}, {"id": "35730302", "code": "35730302", "name": "POLYSTYRENE TUBE 3S", "price": 7.49, "rrp": 25.99, "image": ""}, {"id": "35730053", "code": "35730053", "name": "POM POM ASST SIZES", "price": 6.75, "rrp": 21.99, "image": ""}, {"id": "35730256", "code": "35730256", "name": "POM POM ASST SIZES WHITE", "price": 6.72, "rrp": 18.99, "image": ""}, {"id": "35730054", "code": "35730054", "name": "POM POM MED ASST WITH TINSEL", "price": 8.22, "rrp": 25.99, "image": ""}, {"id": "35730720", "code": "35730720", "name": "POM POM XSML W TINSEL WHT", "price": 6.75, "rrp": 18.99, "image": ""}, {"id": "35730144", "code": "35730144", "name": "POM POM XSML WITH TINSEL", "price": 6.75, "rrp": 19.99, "image": ""}, {"id": "35730503", "code": "35730503", "name": "PROJECT PLANT 17CM GRN/WHT", "price": 7.75, "rrp": 27.59, "image": ""}, {"id": "35730630", "code": "35730630", "name": "PROJECT PLANT ANUBIAS GRN W M/COL", "price": 5.41, "rrp": 17.99, "image": ""}, {"id": "35730108", "code": "35730108", "name": "PROJECT PLANT FERN LEAVES GRN", "price": 5.41, "rrp": 17.99, "image": ""}, {"id": "35730156", "code": "35730156", "name": "PROJECT PLANT FERN YEL/GRN", "price": 6.92, "rrp": 27.59, "image": ""}, {"id": "35730120", "code": "35730120", "name": "PROJECT PLANT GREEN PURP/LEAVES", "price": 6.21, "rrp": 27.59, "image": ""}, {"id": "35730627", "code": "35730627", "name": "PROJECT PLANT GRN COPPER COIN M/C", "price": 5.41, "rrp": 17.99, "image": ""}, {"id": "35730149", "code": "35730149", "name": "PROJECT PLANT GRN PINE CONE FLOWE", "price": 5.41, "rrp": 27.59, "image": ""}, {"id": "35730164", "code": "35730164", "name": "PROJECT PLANT GRN W TINY BUD PNK/", "price": 5.41, "rrp": 17.99, "image": ""}, {"id": "35730628", "code": "35730628", "name": "PROJECT PLANT GRN/YEL BERRY BUSH", "price": 5.41, "rrp": 17.99, "image": ""}, {"id": "35730476", "code": "35730476", "name": "PROJECT PLANT HEARTY LEAVES", "price": 6.02, "rrp": 27.59, "image": ""}, {"id": "35730620", "code": "35730620", "name": "PROJECT PLANT LAVENDER MOSS", "price": 6.2, "rrp": 27.59, "image": ""}, {"id": "35730479", "code": "35730479", "name": "PROJECT PLANT LEAVES GRN", "price": 6.2, "rrp": 27.59, "image": ""}, {"id": "35730034", "code": "35730034", "name": "PROJECT PLANT LEAVES WITH TWIRLS", "price": 7.49, "rrp": 27.59, "image": ""}, {"id": "35730169", "code": "35730169", "name": "PROJECT PLANT LRG PUR BERRY", "price": 6.02, "rrp": 17.99, "image": ""}, {"id": "35730238", "code": "35730238", "name": "PROJECT PLANT PINE CONE", "price": 6.42, "rrp": 27.59, "image": ""}, {"id": "35730112", "code": "35730112", "name": "PROJECT PLANT RED/WHT SUNFLOWER", "price": 6.21, "rrp": 17.99, "image": ""}, {"id": "35730239", "code": "35730239", "name": "PROJECT PLANT SEAGRASS GRN", "price": 7.49, "rrp": 27.59, "image": ""}, {"id": "35730625", "code": "35730625", "name": "PROJECT PLANT SEAGRASS PNK", "price": 7.49, "rrp": 27.59, "image": ""}, {"id": "35730157", "code": "35730157", "name": "PROJECT PLANT SEAWEED GRN/BLU", "price": 6.02, "rrp": 27.59, "image": ""}, {"id": "35730168", "code": "35730168", "name": "PROJECT PLANT SML WHT/GRN FLOWER", "price": 5.41, "rrp": 17.99, "image": ""}, {"id": "35730629", "code": "35730629", "name": "PROJECT PLANT SPIKE GRN BUSH W M/", "price": 5.41, "rrp": 17.99, "image": ""}, {"id": "35730631", "code": "35730631", "name": "PROJECT PLANT SPIKE OLIVE/CONE M/", "price": 5.41, "rrp": 17.99, "image": ""}, {"id": "35730139", "code": "35730139", "name": "PROJECT PLANT STERM LEAVES", "price": 5.41, "rrp": 27.59, "image": ""}, {"id": "35730110", "code": "35730110", "name": "PROJECT PLANT TINY FERN GRN/YEL", "price": 5.41, "rrp": 17.99, "image": ""}, {"id": "35730109", "code": "35730109", "name": "PROJECT PLANT TINY WHT/GRN BUDS", "price": 6.21, "rrp": 27.59, "image": ""}, {"id": "35730107", "code": "35730107", "name": "PROJECT PLANT TREE LEAVES LRG", "price": 6.58, "rrp": 27.59, "image": ""}, {"id": "35730122", "code": "35730122", "name": "PROJECT PLANT WHT JASMINE", "price": 6.02, "rrp": 27.59, "image": ""}, {"id": "35730463", "code": "35730463", "name": "RAFFIA MIX COLOURS 12PC", "price": 28.67, "rrp": 81.59, "image": ""}, {"id": "35730464", "code": "35730464", "name": "RAFFIA MIX COLOURS WITH WHITE 12P", "price": 26.86, "rrp": 82.0, "image": ""}];
+const qtys = {};
+let sortCol = 'name';
+let sortDir = 1;
+
+function render() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const sort = document.getElementById('sort').value;
+  let list = q ? PRODUCTS.filter(p =>
+    p.name.toLowerCase().includes(q) || p.code.includes(q)
+  ) : [...PRODUCTS];
+
+  // Sort
+  list.sort((a, b) => {
+    if(sort==='name-asc') return a.name.localeCompare(b.name);
+    if(sort==='name-desc') return b.name.localeCompare(a.name);
+    if(sort==='code-asc') return a.code.localeCompare(b.code);
+    if(sort==='code-desc') return b.code.localeCompare(a.code);
+    if(sort==='price-asc') return a.price - b.price;
+    if(sort==='price-desc') return b.price - a.price;
+    return 0;
+  });
+
+  document.getElementById('results-count').textContent = list.length + ' products';
+  updateSummary();
+
+  const tbody = document.getElementById('tbody');
+  if(!list.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No products match your search.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(p => {
+    const qty = qtys[p.id] || 0;
+    const hasQty = qty > 0;
+    return `<tr class="${hasQty ? 'has-qty' : ''}" id="row-${p.id}">
+      <td class="col-img">${p.image ? `<img class="product-thumb" src="${p.image}" alt="${p.name}" onerror="this.outerHTML='<div class=product-thumb-ph>📦</div>'"/>` : '<div class="product-thumb-ph">📦</div>'}</td>
+      <td class="col-code">${p.code}</td>
+      <td class="col-name">${p.name}</td>
+      <td class="col-price">R${p.price.toFixed(2)}</td>
+      <td class="col-rrp">R${p.rrp.toFixed(2)}</td>
+      <td class="col-qty"><input class="qty-input${hasQty?' has-val':''}" type="number" min="0" value="${qty||''}" placeholder="0" data-id="${p.id}" onchange="setQty(this)" oninput="setQty(this)"/></td>
+    </tr>`;
+  }).join('');
+}
+
+function setQty(input) {
+  const id = input.getAttribute('data-id');
+  const val = parseInt(input.value) || 0;
+  if(val > 0) { qtys[id] = val; input.classList.add('has-val'); }
+  else { delete qtys[id]; input.classList.remove('has-val'); input.value = ''; }
+  const row = document.getElementById('row-' + id);
+  if(row) { if(val>0) row.classList.add('has-qty'); else row.classList.remove('has-qty'); }
+  updateSummary();
+}
+
+function updateSummary() {
+  const ids = Object.keys(qtys);
+  const el = document.getElementById('order-summary');
+  const btn = document.getElementById('submit-btn');
+  if(!ids.length) { el.textContent = ''; btn.disabled = true; return; }
+  const lines = ids.length;
+  const totalQty = ids.reduce((s,id) => s + qtys[id], 0);
+  const totalVal = ids.reduce((s,id) => {
+    const p = PRODUCTS.find(x => x.id===id);
+    return s + (p ? p.price * qtys[id] : 0);
+  }, 0);
+  el.textContent = `${lines} item${lines!==1?'s':''} · ${totalQty} units · R${totalVal.toFixed(2)}`;
+  btn.disabled = false;
+}
+
+function clearAll() {
+  Object.keys(qtys).forEach(k => delete qtys[k]);
+  render();
+}
+
+function openSubmit() {
+  const fname = document.getElementById('fname').value.trim();
+  if(!fname) { alert('Please enter your franchise name first.'); document.getElementById('fname').focus(); return; }
+  const ids = Object.keys(qtys);
+  if(!ids.length) { alert('Please enter quantities for at least one product.'); return; }
+  const lines = ids.map(id => {
+    const p = PRODUCTS.find(x => x.id===id);
+    return { ...p, qty: qtys[id], subtotal: p.price * qtys[id] };
+  }).sort((a,b) => a.name.localeCompare(b.name));
+  const total = lines.reduce((s,l) => s + l.subtotal, 0);
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Franchise: <strong style="color:var(--text)">${fname}</strong></p>
+    ${lines.map(l => `
+      <div class="order-line">
+        <div>
+          <div class="order-line-name">${l.name}</div>
+          <div class="order-line-sub">${l.code} · Qty ${l.qty} × R${l.price.toFixed(2)}</div>
+        </div>
+        <div class="order-line-price">R${l.subtotal.toFixed(2)}</div>
+      </div>`).join('')}
+    <div class="order-total"><span>Total (excl VAT)</span><span>R${total.toFixed(2)}</span></div>
+  `;
+  document.getElementById('success-box').style.display = 'none';
+  document.getElementById('confirm-btn').style.display = 'block';
+  document.getElementById('confirm-btn').disabled = false;
+  document.getElementById('modal').classList.add('open');
+}
+
+function confirmOrder() {
+  const fname = document.getElementById('fname').value.trim();
+  const ids = Object.keys(qtys);
+  const lines = ids.map(id => {
+    const p = PRODUCTS.find(x => x.id===id);
+    return `${p.code} - ${p.name} x${qtys[id]}`;
+  });
+  const total = ids.reduce((s,id) => {
+    const p = PRODUCTS.find(x => x.id===id);
+    return s + p.price * qtys[id];
+  }, 0);
+  const saved = JSON.parse(localStorage.getItem('pna_orders')||'[]');
+  saved.push({
+    franchiseName: fname,
+    items: lines.join(', '),
+    total: total.toFixed(2),
+    date: new Date().toLocaleString('en-ZA')
+  });
+  localStorage.setItem('pna_orders', JSON.stringify(saved));
+  document.getElementById('success-box').style.display = 'block';
+  document.getElementById('confirm-btn').style.display = 'none';
+  clearAll();
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal')) closeModal(); });
+render();
+</script>
+</body>
+</html>
