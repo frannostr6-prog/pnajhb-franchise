@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PNA JHB — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#f5f3ef;--card:#fff;--border:#e2ddd6;--text:#1a1714;--muted:#7a756e;--accent:#c8402a;--accent-light:#fdf0ed;--accent-dark:#9e3220;--green:#2a7a4b;--green-light:#edf7f2;--radius:12px; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+  header{background:var(--text);color:#fff;padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:56px;}
+  .logo{font-size:15px;font-weight:600;letter-spacing:.04em;}.logo span{color:var(--accent);}
+  .admin-badge{font-size:11px;background:var(--accent);padding:3px 8px;border-radius:20px;font-weight:500;}
+  .nav-link{color:#fff;opacity:.7;font-size:13px;text-decoration:none;margin-right:10px;}.nav-link:hover{opacity:1;}
+  .container{max-width:960px;margin:0 auto;padding:20px 16px;}
+  h1{font-size:20px;font-weight:600;margin-bottom:3px;}
+  .subtitle{font-size:13px;color:var(--muted);margin-bottom:20px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px;}
+  .card-title{font-size:14px;font-weight:600;margin-bottom:14px;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(max-width:500px){.form-grid{grid-template-columns:1fr;}}
+  .field{display:flex;flex-direction:column;gap:4px;}.field.full{grid-column:1/-1;}
+  label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  input,textarea,select{padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;width:100%;}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent);background:#fff;}
+  textarea{resize:vertical;min-height:64px;}
+  .img-upload{border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;cursor:pointer;background:var(--bg);}
+  .img-upload:hover{border-color:var(--accent);}
+  .img-upload input{display:none;}
+  .img-preview{width:72px;height:72px;object-fit:cover;border-radius:8px;margin:0 auto 8px;display:block;}
+  .upload-text{font-size:12px;color:var(--muted);}
+  .btn{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;border:none;}
+  .btn-red{background:var(--accent);color:#fff;}.btn-red:hover{background:var(--accent-dark);}
+  .btn-ghost{background:none;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light);}
+  .btn-edit{background:none;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;margin-right:5px;}
+  .btn-edit:hover{border-color:var(--text);color:var(--text);}
+  .save-msg{font-size:13px;color:var(--green);font-weight:500;margin-top:8px;display:none;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:9px 12px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);background:var(--bg);}
+  td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#faf9f7;}
+  .thumb{width:36px;height:36px;object-fit:cover;border-radius:6px;background:var(--bg);display:block;}
+  .thumb-ph{width:36px;height:36px;border-radius:6px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid var(--border);}
+  .price-cell{font-family:"DM Mono",monospace;font-weight:500;color:var(--accent);}
+  .rrp-cell{font-family:"DM Mono",monospace;color:var(--muted);}
+  .code-cell{font-family:"DM Mono",monospace;font-size:11px;color:var(--muted);}
+  .tbl-wrap{overflow-x:auto;}
+  .header-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .count-badge{font-size:12px;background:var(--bg);border:1px solid var(--border);padding:3px 10px;border-radius:20px;color:var(--muted);}
+  .empty-tbl{text-align:center;padding:36px;color:var(--muted);}
+  .order-item{padding:13px 18px;border-bottom:1px solid var(--border);}
+  .order-item:last-child{border-bottom:none;}
+  .order-top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .order-name{font-weight:600;font-size:14px;}
+  .order-total{font-family:"DM Mono",monospace;font-weight:600;color:var(--accent);}
+  .order-meta{font-size:12px;color:var(--muted);margin-top:3px;}
+  .search-tbl{padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;width:200px;}
+  .search-tbl:focus{border-color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">PNA<span>JHB</span> Admin</div>
+  <div style="display:flex;align-items:center;">
+    <a href="index.html" class="nav-link">← View portal</a>
+    <span class="admin-badge">Admin</span>
+  </div>
+</header>
+<div class="container">
+  <h1>Product manager</h1>
+  <p class="subtitle">125 products pre-loaded from your order sheet. Add photos, edit prices, or add new products below.</p>
+
+  <div class="card">
+    <div class="card-title" id="form-title">➕ Add new product</div>
+    <div class="form-grid">
+      <div class="field"><label>Product code *</label><input type="text" id="p-code" placeholder="e.g. 35730450"/></div>
+      <div class="field"><label>Product name *</label><input type="text" id="p-name" placeholder="e.g. BEADS 4 SIZE MET ASST"/></div>
+      <div class="field"><label>Selling price excl VAT (R) *</label><input type="number" id="p-price" placeholder="0.00" step="0.01" min="0"/></div>
+      <div class="field"><label>RRP incl VAT (R) *</label><input type="number" id="p-rrp" placeholder="0.00" step="0.01" min="0"/></div>
+      <div class="field full"><label>Description (optional)</label><textarea id="p-desc" placeholder="Short description..."></textarea></div>
+      <div class="field full">
+        <label>Product image</label>
+        <label class="img-upload" id="upload-label">
+          <input type="file" id="p-image" accept="image/*" onchange="previewImg(this)"/>
+          <img id="img-preview" class="img-preview" style="display:none"/>
+          <div class="upload-text" id="upload-text">📷 Click to upload photo</div>
+        </label>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;align-items:center;">
+      <button class="btn btn-red" onclick="saveProduct()">Save product</button>
+      <button class="btn btn-ghost" onclick="resetForm()" style="font-size:13px;">Cancel</button>
+    </div>
+    <div class="save-msg" id="save-msg">✅ Saved!</div>
+  </div>
+
+  <div class="card">
+    <div class="header-row">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:14px;font-weight:600;">All products</span>
+        <span class="count-badge" id="prod-count">0</span>
+      </div>
+      <input class="search-tbl" type="text" placeholder="Search..." oninput="renderTable(this.value)"/>
+    </div>
+    <div class="tbl-wrap"><div id="prod-table"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="header-row">
+      <span style="font-size:14px;font-weight:600;">Incoming orders</span>
+      <button class="btn-ghost" onclick="clearOrders()">Clear all</button>
+    </div>
+    <div id="orders-list"></div>
+  </div>
+</div>
+
+<script>
+let products = JSON.parse(localStorage.getItem('pna_products') || 'null');
+if(!products){
+  products = [
+  {
+    "id": "35730450",
+    "code": "35730450",
+    "name": "BEADS 4 SIZE MET ASST",
+    "price": 9.72,
+    "rrp": 31.59,
+    "image": ""
+  },
+  {
+    "id": "35730447",
+    "code": "35730447",
+    "name": "BEADS BELLS 6 SIZES MET ASST",
+    "price": 8.79,
+    "rrp": 31.59,
+    "image": ""
+  },
+  {
+    "id": "35730283",
+    "code": "35730283",
+    "name": "BEADS DISCO BALL 20MM WHT ROUND",
+    "price": 6.75,
+    "rrp": 21.99,
+    "image": ""
+  },
+  {
+    "id": "35730299",
+    "code": "35730299",
+    "name": "BEADS FLOWRS MATTE MIX COLS",
+    "price": 6.84,
+    "rrp": 18.99,
+    "image": ""
+  },
+  {
+    "id": "35730298",
+    "code": "35730298",
+    "name": "BEADS FLWR 4PETALS MIX COLS",
+    "price": 6.84,
+    "rrp": 21.99,
+    "image": ""
+  },
+  {
+    "id": "35730301",
+    "code": "35730301",
+    "name": "BEADS MIX SET FLWRS/HRTS/FISH/BUN",
+    "price": 8.22,
+    "rrp": 21.99,
+    "image": ""
+  },
+  {
+    "id": "35730275",
+    "code": "35730275",
+    "name": "BEADS NATURAL 17MM T39-4(6S)",
+    "price": 8.22,
+    "rrp": 21.99,
+    "image": ""
+  },
+  {
+    "id": "35730276",
+    "code": "35730276",
+    "name": "BEADS NATURAL 22MM T39-4(4S)",
+    "price": 8.22,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730273",
+    "code": "35730273",
+    "name": "BEADS NATURAL 8MM T39-4",
+    "price": 8.22,
+    "rrp": 24.59,
+    "image": ""
+  },
+  {
+    "id": "35730272",
+    "code": "35730272",
+    "name": "BEADS NATURAL T39-4 10MM",
+    "price": 8.22,
+    "rrp": 24.59,
+    "image": ""
+  },
+  {
+    "id": "35730294",
+    "code": "35730294",
+    "name": "BEADS OVAL 10MM PEARLS MIX COL",
+    "price": 7.74,
+    "rrp": 21.99,
+    "image": ""
+  },
+  {
+    "id": "35730288",
+    "code": "35730288",
+    "name": "BEADS ROUND 10MM CRINKLE MIX COL",
+    "price": 7.74,
+    "rrp": 21.99,
+    "image": ""
+  },
+  {
+    "id": "35730360",
+    "code": "35730360",
+    "name": "BEADS ROUND 10MM PEARL WHT 12S",
+    "price": 7.49,
+    "rrp": 23.99,
+    "image": ""
+  },
+  {
+    "id": "35730368",
+    "code": "35730368",
+    "name": "BEADS ROUND 15MM CLEAR ASST",
+    "price": 7.77,
+    "rrp": 23.59,
+    "image": ""
+  },
+  {
+    "id": "35730295",
+    "code": "35730295",
+    "name": "BEADS ROUND 8MM PEARLS MIX COL",
+    "price": 9.91,
+    "rrp": 21.99,
+    "image": ""
+  },
+  {
+    "id": "35730407",
+    "code": "35730407",
+    "name": "BEADS ROUND GLD 5MM 90S",
+    "price": 8.22,
+    "rrp": 21.99,
+    "image": ""
+  },
+  {
+    "id": "35730270",
+    "code": "35730270",
+    "name": "CRAFT COLOUR BEADS 8MMT39-4",
+    "price": 8.22,
+    "rrp": 21.99,
+    "image": ""
+  },
+  {
+    "id": "35730032",
+    "code": "35730032",
+    "name": "CRAFT FEATHERS 12-13CM ASST",
+    "price": 7.49,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730064",
+    "code": "35730064",
+    "name": "CRAFT FEATHERS 12-13CM GRN",
+    "price": 7.74,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730657",
+    "code": "35730657",
+    "name": "CRAFT FEATHERS 12-13CM L/BRN",
+    "price": 7.74,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730654",
+    "code": "35730654",
+    "name": "CRAFT FEATHERS 12-13CM L/GRN",
+    "price": 7.74,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730063",
+    "code": "35730063",
+    "name": "CRAFT FEATHERS 12-13CM ORG",
+    "price": 7.74,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730057",
+    "code": "35730057",
+    "name": "CRAFT FEATHERS 12-13CM PNK",
+    "price": 7.64,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730060",
+    "code": "35730060",
+    "name": "CRAFT FEATHERS 12-13CM TURQ",
+    "price": 7.19,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730058",
+    "code": "35730058",
+    "name": "CRAFT FEATHERS 12-13CM YEL",
+    "price": 9.87,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730062",
+    "code": "35730062",
+    "name": "CRAFT FEATHERS 12-14CM BRN",
+    "price": 7.74,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730035",
+    "code": "35730035",
+    "name": "CRAFT FEATHERS 17-20CM MI",
+    "price": 8.22,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730648",
+    "code": "35730648",
+    "name": "CRAFT FEATHERS 20-22CM BRN 12S",
+    "price": 9.87,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730472",
+    "code": "35730472",
+    "name": "CRAFT FEATHERS 20-22CM D/BRN 12S",
+    "price": 7.63,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730471",
+    "code": "35730471",
+    "name": "CRAFT FEATHERS 20-22CM L/PINK 12S",
+    "price": 7.98,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730473",
+    "code": "35730473",
+    "name": "CRAFT FEATHERS 20-22CM WH 12S",
+    "price": 7.49,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730072",
+    "code": "35730072",
+    "name": "CRAFT FEATHERS FINE CERISE",
+    "price": 7.41,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730026",
+    "code": "35730026",
+    "name": "CRAFT FEATHERS FINE D/GRN",
+    "price": 7.98,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730068",
+    "code": "35730068",
+    "name": "CRAFT FEATHERS FINE L/GRN",
+    "price": 9.87,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730069",
+    "code": "35730069",
+    "name": "CRAFT FEATHERS FINE L/PNK",
+    "price": 9.58,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730070",
+    "code": "35730070",
+    "name": "CRAFT FEATHERS FINE ORG",
+    "price": 9.58,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730067",
+    "code": "35730067",
+    "name": "CRAFT FEATHERS FINE PUR",
+    "price": 8.11,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730076",
+    "code": "35730076",
+    "name": "CRAFT FEATHERS FINE RED",
+    "price": 8.22,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730075",
+    "code": "35730075",
+    "name": "CRAFT FEATHERS FINE TURQUOISE",
+    "price": 7.63,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730074",
+    "code": "35730074",
+    "name": "CRAFT FEATHERS FINE WHT",
+    "price": 8.22,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730077",
+    "code": "35730077",
+    "name": "CRAFT FEATHERS FINE YEL",
+    "price": 7.41,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730487",
+    "code": "35730487",
+    "name": "CRAFT POLYSTRENE KIT BEETLE",
+    "price": 12.61,
+    "rrp": 33.99,
+    "image": ""
+  },
+  {
+    "id": "35730486",
+    "code": "35730486",
+    "name": "CRAFT POLYSTRENE KIT BUMBLE BEE",
+    "price": 12.61,
+    "rrp": 33.99,
+    "image": ""
+  },
+  {
+    "id": "35730488",
+    "code": "35730488",
+    "name": "CRAFT POLYSTRENE KIT BUTTERFLY",
+    "price": 12.61,
+    "rrp": 33.99,
+    "image": ""
+  },
+  {
+    "id": "35730457",
+    "code": "35730457",
+    "name": "CRAFT ROUND PLASTIC 3CM L/BL",
+    "price": 6.96,
+    "rrp": 23.99,
+    "image": ""
+  },
+  {
+    "id": "35730452",
+    "code": "35730452",
+    "name": "CRAFT ROUND PLASTIC 3CM RED",
+    "price": 7.41,
+    "rrp": 23.99,
+    "image": ""
+  },
+  {
+    "id": "35730461",
+    "code": "35730461",
+    "name": "CRAFT ROUND PLASTIC 3CM WHT",
+    "price": 7.74,
+    "rrp": 23.99,
+    "image": ""
+  },
+  {
+    "id": "35730451",
+    "code": "35730451",
+    "name": "CRAFT ROUND PLASTIC 3CM YEL",
+    "price": 7.77,
+    "rrp": 23.99,
+    "image": ""
+  },
+  {
+    "id": "35730018",
+    "code": "35730018",
+    "name": "CRAFT STICKS COL 10CM 5MM",
+    "price": 8.78,
+    "rrp": 29.99,
+    "image": ""
+  },
+  {
+    "id": "35730143",
+    "code": "35730143",
+    "name": "CRAFT STICKS COL 9,3X10MM",
+    "price": 6.49,
+    "rrp": 18.99,
+    "image": ""
+  },
+  {
+    "id": "35730021",
+    "code": "35730021",
+    "name": "CRAFT STICKS COL MATCH 50MM",
+    "price": 5.49,
+    "rrp": 15.99,
+    "image": ""
+  },
+  {
+    "id": "35730011",
+    "code": "35730011",
+    "name": "CRAFT STICKS I/CRM 140X6 NAT",
+    "price": 6.79,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730467",
+    "code": "35730467",
+    "name": "CRAFT STICKS I/CRM 6,3X1CM",
+    "price": 6.79,
+    "rrp": 23.99,
+    "image": ""
+  },
+  {
+    "id": "35730470",
+    "code": "35730470",
+    "name": "CRAFT STICKS I/CRM COL 110MM",
+    "price": 8.72,
+    "rrp": 20.59,
+    "image": ""
+  },
+  {
+    "id": "35730005",
+    "code": "35730005",
+    "name": "CRAFT STICKS I/CRM COL 50",
+    "price": 4.73,
+    "rrp": 14.0,
+    "image": ""
+  },
+  {
+    "id": "35730468",
+    "code": "35730468",
+    "name": "CRAFT STICKS I/CRM COL 6CM",
+    "price": 8.49,
+    "rrp": 26.99,
+    "image": ""
+  },
+  {
+    "id": "35730007",
+    "code": "35730007",
+    "name": "CRAFT STICKS I/CRM NAT 110MM",
+    "price": 4.29,
+    "rrp": 15.99,
+    "image": ""
+  },
+  {
+    "id": "35730003",
+    "code": "35730003",
+    "name": "CRAFT STICKS I/CRM NAT WIDE",
+    "price": 7.23,
+    "rrp": 26.58,
+    "image": ""
+  },
+  {
+    "id": "35730013",
+    "code": "35730013",
+    "name": "CRAFT STICKS I/CRM NAT WIDE",
+    "price": 6.79,
+    "rrp": 23.99,
+    "image": ""
+  },
+  {
+    "id": "35730015",
+    "code": "35730015",
+    "name": "CRAFT STICKS NAT 10CM 5MM",
+    "price": 6.79,
+    "rrp": 23.59,
+    "image": ""
+  },
+  {
+    "id": "35730017",
+    "code": "35730017",
+    "name": "CRAFT STICKS SOSATIE SHORT",
+    "price": 6.79,
+    "rrp": 23.59,
+    "image": ""
+  },
+  {
+    "id": "35730280",
+    "code": "35730280",
+    "name": "CRAFT THREAD HOLDER NATURAL 22MM",
+    "price": 7.49,
+    "rrp": 23.99,
+    "image": ""
+  },
+  {
+    "id": "35730118",
+    "code": "35730118",
+    "name": "CRAFT WOODEN CUBES 20MM 20S",
+    "price": 10.84,
+    "rrp": 36.0,
+    "image": ""
+  },
+  {
+    "id": "35730330",
+    "code": "35730330",
+    "name": "CRAFT WOODEN INSECTS 6S",
+    "price": 8.71,
+    "rrp": 20.99,
+    "image": ""
+  },
+  {
+    "id": "35730114",
+    "code": "35730114",
+    "name": "POLYSTYRENE ALPHA 9,5CM A-Z",
+    "price": 23.44,
+    "rrp": 73.99,
+    "image": ""
+  },
+  {
+    "id": "35730039",
+    "code": "35730039",
+    "name": "POLYSTYRENE BALL 10CM 1S",
+    "price": 4.99,
+    "rrp": 15.99,
+    "image": ""
+  },
+  {
+    "id": "35730078",
+    "code": "35730078",
+    "name": "POLYSTYRENE BALL 11CM 1S",
+    "price": 6.49,
+    "rrp": 19.99,
+    "image": ""
+  },
+  {
+    "id": "35730040",
+    "code": "35730040",
+    "name": "POLYSTYRENE BALL 12CM 1S",
+    "price": 10.41,
+    "rrp": 29.99,
+    "image": ""
+  },
+  {
+    "id": "35730031",
+    "code": "35730031",
+    "name": "POLYSTYRENE BALL 15CM 1S",
+    "price": 8.79,
+    "rrp": 27.99,
+    "image": ""
+  },
+  {
+    "id": "35730036",
+    "code": "35730036",
+    "name": "POLYSTYRENE BALLS 1CM",
+    "price": 6.58,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730024",
+    "code": "35730024",
+    "name": "POLYSTYRENE BALLS 2,5CM 40S",
+    "price": 5.41,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730023",
+    "code": "35730023",
+    "name": "POLYSTYRENE BALLS 2CM Y-018",
+    "price": 6.29,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730037",
+    "code": "35730037",
+    "name": "POLYSTYRENE BALLS 3,5CM 15S",
+    "price": 5.41,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730025",
+    "code": "35730025",
+    "name": "POLYSTYRENE BALLS 3CM 30S",
+    "price": 8.57,
+    "rrp": 27.99,
+    "image": ""
+  },
+  {
+    "id": "35730027",
+    "code": "35730027",
+    "name": "POLYSTYRENE BALLS 4CM 8S",
+    "price": 5.41,
+    "rrp": 19.99,
+    "image": ""
+  },
+  {
+    "id": "35730020",
+    "code": "35730020",
+    "name": "POLYSTYRENE BALLS 6CM 6S",
+    "price": 6.29,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730029",
+    "code": "35730029",
+    "name": "POLYSTYRENE BALLS 8CM 3S",
+    "price": 5.41,
+    "rrp": 19.99,
+    "image": ""
+  },
+  {
+    "id": "35730349",
+    "code": "35730349",
+    "name": "POLYSTYRENE FLAT CIRCLE 12CM",
+    "price": 8.22,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730469",
+    "code": "35730469",
+    "name": "POLYSTYRENE FRAMES 30X22/20X16 2P",
+    "price": 10.06,
+    "rrp": 30.99,
+    "image": ""
+  },
+  {
+    "id": "35730041",
+    "code": "35730041",
+    "name": "POLYSTYRENE HALF CIRCLES 3CM",
+    "price": 5.99,
+    "rrp": 19.99,
+    "image": ""
+  },
+  {
+    "id": "35730257",
+    "code": "35730257",
+    "name": "POLYSTYRENE HEARTS 4S",
+    "price": 7.19,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730048",
+    "code": "35730048",
+    "name": "POLYSTYRENE HEARTS 5S",
+    "price": 6.75,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730047",
+    "code": "35730047",
+    "name": "POLYSTYRENE HEARTS 8S",
+    "price": 7.83,
+    "rrp": 23.99,
+    "image": ""
+  },
+  {
+    "id": "35730135",
+    "code": "35730135",
+    "name": "POLYSTYRENE LOOPS 11CM 3S",
+    "price": 6.75,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730043",
+    "code": "35730043",
+    "name": "POLYSTYRENE LOOPS 15CM 2S",
+    "price": 7.49,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730079",
+    "code": "35730079",
+    "name": "POLYSTYRENE LOOPS ASST 3S",
+    "price": 8.22,
+    "rrp": 24.99,
+    "image": ""
+  },
+  {
+    "id": "35730049",
+    "code": "35730049",
+    "name": "POLYSTYRENE SQUARES 4CM 8S",
+    "price": 7.88,
+    "rrp": 25.99,
+    "image": ""
+  },
+  {
+    "id": "35730045",
+    "code": "35730045",
+    "name": "POLYSTYRENE STARS 6S",
+    "price": 8.22,
+    "rrp": 26.99,
+    "image": ""
+  },
+  {
+    "id": "35730046",
+    "code": "35730046",
+    "name": "POLYSTYRENE STARS WITH HOLE 6S",
+    "price": 7.85,
+    "rrp": 26.99,
+    "image": ""
+  },
+  {
+    "id": "35730050",
+    "code": "35730050",
+    "name": "POLYSTYRENE TUBE 12S",
+    "price": 6.75,
+    "rrp": 25.99,
+    "image": ""
+  },
+  {
+    "id": "35730302",
+    "code": "35730302",
+    "name": "POLYSTYRENE TUBE 3S",
+    "price": 7.49,
+    "rrp": 25.99,
+    "image": ""
+  },
+  {
+    "id": "35730053",
+    "code": "35730053",
+    "name": "POM POM ASST SIZES",
+    "price": 6.75,
+    "rrp": 21.99,
+    "image": ""
+  },
+  {
+    "id": "35730256",
+    "code": "35730256",
+    "name": "POM POM ASST SIZES WHITE",
+    "price": 6.72,
+    "rrp": 18.99,
+    "image": ""
+  },
+  {
+    "id": "35730054",
+    "code": "35730054",
+    "name": "POM POM MED ASST WITH TINSEL",
+    "price": 8.22,
+    "rrp": 25.99,
+    "image": ""
+  },
+  {
+    "id": "35730720",
+    "code": "35730720",
+    "name": "POM POM XSML W TINSEL WHT",
+    "price": 6.75,
+    "rrp": 18.99,
+    "image": ""
+  },
+  {
+    "id": "35730144",
+    "code": "35730144",
+    "name": "POM POM XSML WITH TINSEL",
+    "price": 6.75,
+    "rrp": 19.99,
+    "image": ""
+  },
+  {
+    "id": "35730503",
+    "code": "35730503",
+    "name": "PROJECT PLANT 17CM GRN/WHT",
+    "price": 7.75,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730630",
+    "code": "35730630",
+    "name": "PROJECT PLANT ANUBIAS GRN W M/COL",
+    "price": 5.41,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730108",
+    "code": "35730108",
+    "name": "PROJECT PLANT FERN LEAVES GRN",
+    "price": 5.41,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730156",
+    "code": "35730156",
+    "name": "PROJECT PLANT FERN YEL/GRN",
+    "price": 6.92,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730120",
+    "code": "35730120",
+    "name": "PROJECT PLANT GREEN PURP/LEAVES",
+    "price": 6.21,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730627",
+    "code": "35730627",
+    "name": "PROJECT PLANT GRN COPPER COIN M/C",
+    "price": 5.41,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730149",
+    "code": "35730149",
+    "name": "PROJECT PLANT GRN PINE CONE FLOWE",
+    "price": 5.41,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730164",
+    "code": "35730164",
+    "name": "PROJECT PLANT GRN W TINY BUD PNK/",
+    "price": 5.41,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730628",
+    "code": "35730628",
+    "name": "PROJECT PLANT GRN/YEL BERRY BUSH",
+    "price": 5.41,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730476",
+    "code": "35730476",
+    "name": "PROJECT PLANT HEARTY LEAVES",
+    "price": 6.02,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730620",
+    "code": "35730620",
+    "name": "PROJECT PLANT LAVENDER MOSS",
+    "price": 6.2,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730479",
+    "code": "35730479",
+    "name": "PROJECT PLANT LEAVES GRN",
+    "price": 6.2,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730034",
+    "code": "35730034",
+    "name": "PROJECT PLANT LEAVES WITH TWIRLS",
+    "price": 7.49,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730169",
+    "code": "35730169",
+    "name": "PROJECT PLANT LRG PUR BERRY",
+    "price": 6.02,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730238",
+    "code": "35730238",
+    "name": "PROJECT PLANT PINE CONE",
+    "price": 6.42,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730112",
+    "code": "35730112",
+    "name": "PROJECT PLANT RED/WHT SUNFLOWER",
+    "price": 6.21,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730239",
+    "code": "35730239",
+    "name": "PROJECT PLANT SEAGRASS GRN",
+    "price": 7.49,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730625",
+    "code": "35730625",
+    "name": "PROJECT PLANT SEAGRASS PNK",
+    "price": 7.49,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730157",
+    "code": "35730157",
+    "name": "PROJECT PLANT SEAWEED GRN/BLU",
+    "price": 6.02,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730168",
+    "code": "35730168",
+    "name": "PROJECT PLANT SML WHT/GRN FLOWER",
+    "price": 5.41,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730629",
+    "code": "35730629",
+    "name": "PROJECT PLANT SPIKE GRN BUSH W M/",
+    "price": 5.41,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730631",
+    "code": "35730631",
+    "name": "PROJECT PLANT SPIKE OLIVE/CONE M/",
+    "price": 5.41,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730139",
+    "code": "35730139",
+    "name": "PROJECT PLANT STERM LEAVES",
+    "price": 5.41,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730110",
+    "code": "35730110",
+    "name": "PROJECT PLANT TINY FERN GRN/YEL",
+    "price": 5.41,
+    "rrp": 17.99,
+    "image": ""
+  },
+  {
+    "id": "35730109",
+    "code": "35730109",
+    "name": "PROJECT PLANT TINY WHT/GRN BUDS",
+    "price": 6.21,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730107",
+    "code": "35730107",
+    "name": "PROJECT PLANT TREE LEAVES LRG",
+    "price": 6.58,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730122",
+    "code": "35730122",
+    "name": "PROJECT PLANT WHT JASMINE",
+    "price": 6.02,
+    "rrp": 27.59,
+    "image": ""
+  },
+  {
+    "id": "35730463",
+    "code": "35730463",
+    "name": "RAFFIA MIX COLOURS 12PC",
+    "price": 28.67,
+    "rrp": 81.59,
+    "image": ""
+  },
+  {
+    "id": "35730464",
+    "code": "35730464",
+    "name": "RAFFIA MIX COLOURS WITH WHITE 12P",
+    "price": 26.86,
+    "rrp": 82.0,
+    "image": ""
+  }
+];
+  localStorage.setItem('pna_products', JSON.stringify(products));
+}
+let orders = JSON.parse(localStorage.getItem('pna_orders')||'[]');
+let imgData = '';
+let editId = null;
+
+function previewImg(inp){
+  if(!inp.files||!inp.files[0]) return;
+  const r = new FileReader();
+  r.onload = e => {
+    imgData = e.target.result;
+    const p = document.getElementById('img-preview');
+    p.src = imgData; p.style.display='block';
+    document.getElementById('upload-text').style.display='none';
+  };
+  r.readAsDataURL(inp.files[0]);
+}
+
+function saveProduct(){
+  const code = document.getElementById('p-code').value.trim();
+  const name = document.getElementById('p-name').value.trim();
+  const price = parseFloat(document.getElementById('p-price').value);
+  const rrp = parseFloat(document.getElementById('p-rrp').value);
+  const desc = document.getElementById('p-desc').value.trim();
+  if(!code||!name||!price||!rrp){ alert('Please fill in code, name, sell price and RRP.'); return; }
+  if(editId){
+    const idx = products.findIndex(p => p.id===editId);
+    if(idx!==-1) products[idx] = {...products[idx], code, name, price, rrp, description:desc, image: imgData||products[idx].image};
+    editId = null;
+    document.getElementById('form-title').textContent = '➕ Add new product';
+  } else {
+    products.push({id: code, code, name, price, rrp, description:desc, image:imgData});
+  }
+  localStorage.setItem('pna_products', JSON.stringify(products));
+  resetForm();
+  document.getElementById('save-msg').style.display='block';
+  setTimeout(()=>document.getElementById('save-msg').style.display='none',2000);
+  renderTable();
+}
+
+function resetForm(){
+  document.getElementById('p-code').value='';
+  document.getElementById('p-name').value='';
+  document.getElementById('p-price').value='';
+  document.getElementById('p-rrp').value='';
+  document.getElementById('p-desc').value='';
+  document.getElementById('img-preview').style.display='none';
+  document.getElementById('upload-text').style.display='block';
+  document.getElementById('p-image').value='';
+  imgData=''; editId=null;
+  document.getElementById('form-title').textContent='➕ Add new product';
+}
+
+function editProduct(id){
+  const p = products.find(x=>x.id===id);
+  if(!p) return;
+  editId=id;
+  document.getElementById('p-code').value=p.code;
+  document.getElementById('p-name').value=p.name;
+  document.getElementById('p-price').value=p.price;
+  document.getElementById('p-rrp').value=p.rrp;
+  document.getElementById('p-desc').value=p.description||'';
+  if(p.image){ imgData=p.image; const pr=document.getElementById('img-preview'); pr.src=p.image; pr.style.display='block'; document.getElementById('upload-text').style.display='none'; }
+  document.getElementById('form-title').textContent='✏️ Edit product';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function deleteProduct(id){
+  if(!confirm('Delete this product?')) return;
+  products = products.filter(p=>p.id!==id);
+  localStorage.setItem('pna_products', JSON.stringify(products));
+  renderTable();
+}
+
+function renderTable(q=''){
+  const list = q ? products.filter(p => p.name.toLowerCase().includes(q.toLowerCase())||p.code.includes(q)) : products;
+  document.getElementById('prod-count').textContent = products.length + ' products';
+  const el = document.getElementById('prod-table');
+  if(!list.length){ el.innerHTML='<div class="empty-tbl">No products found.</div>'; return; }
+  el.innerHTML = `<table>
+    <thead><tr><th></th><th>Code</th><th>Name</th><th>Sell price</th><th>RRP</th><th></th></tr></thead>
+    <tbody>${list.map(p=>`
+      <tr>
+        <td>${p.image?`<img class="thumb" src="${p.image}" alt="${p.name}"/>`:'<div class="thumb-ph">📦</div>'}</td>
+        <td class="code-cell">${p.code}</td>
+        <td style="font-weight:500;max-width:200px;">${p.name}</td>
+        <td class="price-cell">R${parseFloat(p.price).toFixed(2)}</td>
+        <td class="rrp-cell">R${parseFloat(p.rrp).toFixed(2)}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn-edit" onclick="editProduct('${p.id}')">Edit</button>
+          <button class="btn-ghost" onclick="deleteProduct('${p.id}')">Delete</button>
+        </td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function renderOrders(){
+  const el = document.getElementById('orders-list');
+  orders = JSON.parse(localStorage.getItem('pna_orders')||'[]');
+  if(!orders.length){ el.innerHTML='<div class="empty-tbl">No orders yet.</div>'; return; }
+  el.innerHTML = [...orders].reverse().map(o=>`
+    <div class="order-item">
+      <div class="order-top"><span class="order-name">${o.franchiseName}</span><span class="order-total">R${o.total}</span></div>
+      <div class="order-meta">${o.items}</div>
+      <div class="order-meta">${o.date}</div>
+    </div>`).join('');
+}
+
+function clearOrders(){
+  if(!confirm('Clear all orders?')) return;
+  localStorage.removeItem('pna_orders');
+  renderOrders();
+}
+
+window.addEventListener('storage', e => { if(e.key==='pna_orders') renderOrders(); });
+renderTable();
+renderOrders();
+</script>
+</body>
+</html>
