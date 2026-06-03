@@ -107,15 +107,6 @@ let sortDesc = false;
 // ── LOAD via published CSV ────────────────────────────────────────────────────
 async function loadProducts() {
   const status = document.getElementById('status');
-  // Try cache first (5 min)
-  const cached = localStorage.getItem('pna_products_v2');
-  const cachedTime = parseInt(localStorage.getItem('pna_products_v2_time') || '0');
-  if (cached && Date.now() - cachedTime < 5 * 60 * 1000) {
-    allProducts = JSON.parse(cached);
-    init();
-    fetchCSV(true);
-    return;
-  }
   await fetchCSV(false);
 }
 
@@ -137,8 +128,6 @@ async function fetchCSV(background) {
     }
     if (products.length > 0) {
       allProducts = products;
-      localStorage.setItem('pna_products_v2', JSON.stringify(allProducts));
-      localStorage.setItem('pna_products_v2_time', Date.now().toString());
       if (!background) init();
       else renderAll();
     }

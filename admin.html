@@ -159,8 +159,7 @@ async function loadProducts() {
       p.rrp=parseFloat(p.rrp)||0;
       allProducts.push(p);
     }
-    localStorage.setItem('pna_products_v2',JSON.stringify(allProducts));
-    localStorage.setItem('pna_products_v2_time',Date.now().toString());
+    // no localStorage cache - avoids quota exceeded
     setStatus('list-status','ok',`✅ Loaded ${allProducts.length} products`);
     renderProducts();
     rebuildCatFilter();
@@ -233,8 +232,7 @@ async function saveProduct() {
     setStatus('form-status','ok','✅ Saved! Refresh in a minute to see it in the portal.');
     const idx=allProducts.findIndex(p=>p.id===id);
     if(idx>=0) allProducts[idx]=product; else allProducts.push(product);
-    localStorage.setItem('pna_products_v2',JSON.stringify(allProducts));
-    localStorage.setItem('pna_products_v2_time','0'); // force refresh next load
+    // cache cleared // force refresh next load
     renderProducts(); rebuildCatFilter(); clearForm();
   } catch(e) {
     setStatus('form-status','err','❌ Save failed: '+e.message);
@@ -246,8 +244,7 @@ async function deleteProduct(id,name) {
   try {
     await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'deleteProduct',id})});
     allProducts=allProducts.filter(p=>p.id!==id);
-    localStorage.setItem('pna_products_v2',JSON.stringify(allProducts));
-    localStorage.setItem('pna_products_v2_time','0');
+    // cache cleared
     renderProducts();
     setStatus('list-status','ok','✅ Deleted');
   } catch(e) {
