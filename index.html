@@ -69,13 +69,13 @@ td.qty-cell input{width:70px;padding:5px;text-align:center;border:1px solid #ccc
   <div class="status" id="status">⏳ Loading products…</div>
   <table id="product-table" style="display:none">
     <thead><tr>
-      <th style="width:70px">Image</th>
-      <th onclick="setSort('code')">Code</th>
+      <th style="width:70px;text-align:center">Image</th>
+      <th onclick="setSort('code')" style="width:100px">Code</th>
       <th onclick="setSort('name')">Description</th>
-      <th>Category</th>
-      <th onclick="setSort('price')">Sell Price (excl VAT)</th>
-      <th onclick="setSort('rrp')">RRP (incl VAT)</th>
-      <th>Qty</th>
+      <th style="width:120px">Category</th>
+      <th onclick="setSort('price')" style="width:140px">Sell Price (excl VAT)</th>
+      <th onclick="setSort('rrp')" style="width:130px">RRP (incl VAT)</th>
+      <th style="width:80px">Qty</th>
     </tr></thead>
     <tbody id="table-body"></tbody>
   </table>
@@ -196,8 +196,11 @@ function renderTable() {
 
   document.getElementById('table-body').innerHTML = products.map(p => {
     const qty = quantities[p.id] || '';
+    const imgCell = p.image
+      ? `<td style="text-align:center;padding:4px"><img src="${p.image}" style="width:56px;height:56px;object-fit:contain;cursor:pointer;border-radius:4px" onclick="showImg('${p.image}','${p.name.replace(/'/g,"\\'")}')"></td>`
+      : `<td style="text-align:center;color:#bbb;font-size:11px">No img</td>`;
     return `<tr class="${qty>0?'has-qty':''}">
-      <td>${p.code}</td><td>${p.name}</td><td>${p.category}</td>
+      ${imgCell}<td>${p.code}</td><td>${p.name}</td><td>${p.category}</td>
       <td class="price">R ${Number(p.price).toFixed(2)}</td>
       <td class="rrp">R ${Number(p.rrp).toFixed(2)}</td>
       <td class="qty-cell"><input type="number" min="0" value="${qty}" data-id="${p.id}" onchange="setQty(this)" onclick="this.select()"></td>
