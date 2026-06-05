@@ -87,6 +87,7 @@ tr:hover{background:#fafafa}
       <input type="text" id="prod-search" placeholder="Search…" oninput="renderProducts()">
       <select id="prod-cat-filter" onchange="renderProducts()"><option value="">All Categories</option></select>
       <button class="btn btn-dark" onclick="loadProducts()">🔄 Refresh</button>
+      <button class="btn btn-red" onclick="downloadJSON()" title="Download updated products.json to upload to GitHub">⬇ Download products.json</button>
     </div>
     <div id="prod-loading" class="loading">⏳ Loading products…</div>
     <table id="prod-table" style="display:none">
@@ -110,7 +111,7 @@ tr:hover{background:#fafafa}
 </div>
 
 <script>
-const PRODUCTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSvWtGcth4tLAFLEe4Tg-v7N6xd9EAoH9kfk9OMeNUmcJAyfEGo363dq9SWTe4bsScCac0D2mYtifYv/pub?gid=677550246&single=true&output=csv';
+const PRODUCTS_CSV = 'products.json';
 const ORDERS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSvWtGcth4tLAFLEe4Tg-v7N6xd9EAoH9kfk9OMeNUmcJAyfEGo363dq9SWTe4bsScCac0D2mYtifYv/pub?gid=0&single=true&output=csv';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzBP6y4-JIud-5nPZXbhCjrrhhNEZ_ocYNxlO6n0LIGi0C2Y1zR93KK7xoegLK6MB7/exec';
 let allProducts = [];
@@ -146,19 +147,7 @@ async function loadProducts() {
   setStatus('list-status','info','⏳ Loading from Google Sheets…');
   try {
     const res = await fetch(PRODUCTS_CSV);
-    const text = await res.text();
-    const rows = text.trim().split('\n');
-    const headers = parseCSVRow(rows[0]);
-    allProducts = [];
-    for(let i=1;i<rows.length;i++) {
-      const cols = parseCSVRow(rows[i]);
-      if(!cols[0]) continue;
-      const p={};
-      headers.forEach((h,j)=>p[h.trim()]=(cols[j]||'').trim());
-      p.price=parseFloat(p.price)||0;
-      p.rrp=parseFloat(p.rrp)||0;
-      allProducts.push(p);
-    }
+    allProducts = await res.json();
     // no localStorage cache - avoids quota exceeded
     setStatus('list-status','ok',`✅ Loaded ${allProducts.length} products`);
     renderProducts();
@@ -189,13 +178,21 @@ function renderProducts() {
   document.getElementById('prod-table').style.display=list.length?'table':'none';
   document.getElementById('prod-tbody').innerHTML=list.map(p=>`
     <tr>
+      <td style="text-align:center;width:60px">${p.image?`<img src="${p.image}" style="width:48px;height:48px;object-fit:contain;border-radius:4px;cursor:pointer" onclick="showImgPreview('${p.image}','${p.name.replace(/'/g,"\\'")}')">` : `<span style="color:#bbb;font-size:11px">No img</span>`}</td>
       <td>${p.code}</td><td>${p.name}</td><td>${p.category}</td>
       <td>R ${Number(p.price).toFixed(2)}</td><td>R ${Number(p.rrp).toFixed(2)}</td>
       <td>
         <button class="btn btn-dark btn-sm" onclick='editProduct(${JSON.stringify(p)})'>✏️</button>
+        <button class="btn btn-sm" style="background:#2a7;color:#fff" onclick="uploadImage('${p.id}','${p.code}')">📷</button>
         <button class="btn btn-del btn-sm" onclick="deleteProduct('${p.id}','${p.name}')">🗑</button>
       </td>
     </tr>`).join('');
+  // hidden file input for image upload
+  if(!document.getElementById('img-upload-input')) {
+    const inp = document.createElement('input');
+    inp.type='file'; inp.id='img-upload-input'; inp.accept='image/*'; inp.style.display='none';
+    document.body.appendChild(inp);
+  }
 }
 
 function editProduct(p) {
@@ -237,6 +234,52 @@ async function saveProduct() {
   } catch(e) {
     setStatus('form-status','err','❌ Save failed: '+e.message);
   }
+}
+
+
+function uploadImage(productId, productCode) {
+  const inp = document.getElementById('img-upload-input');
+  inp.value = '';
+  inp.onchange = async function() {
+    const file = inp.files[0];
+    if(!file) return;
+    setStatus('list-status','ok','⏳ Uploading image…');
+    try {
+      const base64 = await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=()=>res(r.result.split(',')[1]);
+        r.onerror=rej;
+        r.readAsDataURL(file);
+      });
+      const resp = await fetch(SCRIPT_URL, {
+        method:'POST',
+        body: JSON.stringify({
+          action: 'uploadImage',
+          productId,
+          productCode,
+          fileName: productCode + '.' + file.name.split('.').pop(),
+          mimeType: file.type,
+          base64Data: base64
+        })
+      });
+      const json = await resp.json();
+      if(json.error) throw new Error(json.error);
+      const lh3Url = 'https://lh3.googleusercontent.com/d/' + json.fileId;
+      const idx = allProducts.findIndex(p=>p.id===productId);
+      if(idx>=0) allProducts[idx].image = lh3Url;
+      renderProducts();
+      setStatus('list-status','ok','✅ Image uploaded! Click "Download products.json" to publish.');
+    } catch(e) {
+      setStatus('list-status','err','❌ Upload failed: '+e.message);
+    }
+  };
+  inp.click();
+}
+
+function showImgPreview(url, name) {
+  document.getElementById('admin-img-modal-src').src = url;
+  document.getElementById('admin-img-modal-name').textContent = name;
+  document.getElementById('admin-img-modal').classList.add('show');
 }
 
 async function deleteProduct(id,name) {
@@ -345,6 +388,20 @@ td{padding:6px 8px;border-bottom:1px solid #eee}
 <div class="sig-box">Picked by: _____________________ Date: _________</div>
 <div class="sig-box">Verified by: _____________________ Date: _________</div></div><br>
 <button onclick="window.print()" style="padding:10px 24px;background:#e63329;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:bold;cursor:pointer">🖨 Print / Save PDF</button>
+
+<!-- Admin image preview modal -->
+<div id="admin-img-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')" style="display:none">
+  <div style="background:#fff;padding:24px;border-radius:8px;text-align:center;max-width:400px;width:90%">
+    <img id="admin-img-modal-src" src="" style="max-width:100%;max-height:300px;object-fit:contain;border-radius:4px">
+    <div id="admin-img-modal-name" style="margin-top:10px;font-weight:bold;font-size:14px"></div>
+    <button class="btn btn-dark" style="margin-top:12px" onclick="document.getElementById('admin-img-modal').classList.remove('show')">✕ Close</button>
+  </div>
+</div>
+<script>
+// Show admin image modal
+document.getElementById('admin-img-modal') && (document.getElementById('admin-img-modal').style.display='flex');
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('admin-img-modal').classList.remove('show');});
+</script>
 </body></html>`);
   w.document.close();
 }
@@ -356,5 +413,33 @@ function setStatus(id,type,msg) {
 }
 
 loadProducts();
+
+function downloadJSON() {
+  if (!allProducts.length) { alert('Load products first.'); return; }
+  const clean = allProducts.map(p => ({
+    id: p.id, code: String(p.code), name: p.name,
+    category: p.category, price: Number(p.price), rrp: Number(p.rrp)
+  }));
+  const blob = new Blob([JSON.stringify(clean, null, 0)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'products.json';
+  a.click();
+  setStatus('list-status', 'ok', '✅ Downloaded! Upload this file to GitHub to update the portal.');
+}
+</script>
+
+<!-- Admin image preview modal -->
+<div id="admin-img-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')" style="display:none">
+  <div style="background:#fff;padding:24px;border-radius:8px;text-align:center;max-width:400px;width:90%">
+    <img id="admin-img-modal-src" src="" style="max-width:100%;max-height:300px;object-fit:contain;border-radius:4px">
+    <div id="admin-img-modal-name" style="margin-top:10px;font-weight:bold;font-size:14px"></div>
+    <button class="btn btn-dark" style="margin-top:12px" onclick="document.getElementById('admin-img-modal').classList.remove('show')">✕ Close</button>
+  </div>
+</div>
+<script>
+// Show admin image modal
+document.getElementById('admin-img-modal') && (document.getElementById('admin-img-modal').style.display='flex');
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('admin-img-modal').classList.remove('show');});
 </script>
 </body></html>
