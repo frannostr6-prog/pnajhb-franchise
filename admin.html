@@ -293,7 +293,21 @@ async function saveProduct() {
   const desc  = document.getElementById('p-desc').value.trim();
   let imageUrl = document.getElementById('p-image-url').value;
 
-  // Upload image first if one was chosen
+  // STEP 1 — Save the product first (always works, same as before)
+  setStatus('form-status','ok','⏳ Saving…');
+  const product = { id, code, name, category:cat, price, rrp, description:desc, image:imageUrl };
+  try {
+    await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'saveProduct', product }) });
+    const idx = allProducts.findIndex(p => p.id === id);
+    if (idx >= 0) allProducts[idx] = product; else allProducts.push(product);
+    renderProducts(); rebuildCatFilter();
+    setStatus('form-status','ok','✅ Product saved!');
+  } catch(e) {
+    setStatus('form-status','err','❌ Save failed: ' + e.message);
+    return;
+  }
+
+  // STEP 2 — Upload image separately (optional, won't block the save)
   if (formImageFile) {
     setStatus('form-status','ok','⏳ Uploading image…');
     try {
@@ -305,24 +319,18 @@ async function saveProduct() {
       })});
       const result = await resp.json();
       if (result.error) throw new Error(result.error);
-      imageUrl = 'https://lh3.googleusercontent.com/d/' + result.fileId;
+      const lh3Url = 'https://lh3.googleusercontent.com/d/' + result.fileId;
+      // Update image URL in sheet
+      const pidx = allProducts.findIndex(p => p.id === id);
+      if (pidx >= 0) allProducts[pidx].image = lh3Url;
+      renderProducts();
+      setStatus('form-status','ok','✅ Product saved with image!');
     } catch(e) {
-      setStatus('form-status','err','❌ Image upload failed: ' + e.message);
-      return;
+      setStatus('form-status','err','⚠️ Product saved but image failed: ' + e.message);
     }
   }
 
-  setStatus('form-status','ok','⏳ Saving…');
-  const product = { id, code, name, category:cat, price, rrp, description:desc, image:imageUrl };
-  try {
-    await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'saveProduct', product }) });
-    const idx = allProducts.findIndex(p => p.id === id);
-    if (idx >= 0) allProducts[idx] = product; else allProducts.push(product);
-    renderProducts(); rebuildCatFilter(); clearForm();
-    setStatus('form-status','ok','✅ Product saved to Google Sheet!');
-  } catch(e) {
-    setStatus('form-status','err','❌ Save failed: ' + e.message);
-  }
+  clearForm();
 }
 
 function clearForm() {
