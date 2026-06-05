@@ -69,6 +69,7 @@ td.qty-cell input{width:70px;padding:5px;text-align:center;border:1px solid #ccc
   <div class="status" id="status">⏳ Loading products…</div>
   <table id="product-table" style="display:none">
     <thead><tr>
+      <th style="width:70px">Image</th>
       <th onclick="setSort('code')">Code</th>
       <th onclick="setSort('name')">Description</th>
       <th>Category</th>
@@ -96,7 +97,7 @@ td.qty-cell input{width:70px;padding:5px;text-align:center;border:1px solid #ccc
 </div>
 
 <script>
-const PRODUCTS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSvWtGcth4tLAFLEe4Tg-v7N6xd9EAoH9kfk9OMeNUmcJAyfEGo363dq9SWTe4bsScCac0D2mYtifYv/pub?gid=677550246&single=true&output=csv';
+const PRODUCTS_CSV = 'products.json';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzBP6y4-JIud-5nPZXbhCjrrhhNEZ_ocYNxlO6n0LIGi0C2Y1zR93KK7xoegLK6MB7/exec';
 let allProducts = [];
 let quantities = {};
@@ -113,21 +114,9 @@ async function loadProducts() {
 async function fetchCSV(background) {
   try {
     const res = await fetch(PRODUCTS_CSV);
-    const text = await res.text();
-    const rows = text.trim().split('\n');
-    const headers = parseCSVRow(rows[0]);
-    const products = [];
-    for (let i = 1; i < rows.length; i++) {
-      const cols = parseCSVRow(rows[i]);
-      if (!cols[0]) continue;
-      const p = {};
-      headers.forEach((h,j) => p[h.trim()] = (cols[j]||'').trim());
-      p.price = parseFloat(p.price) || 0;
-      p.rrp = parseFloat(p.rrp) || 0;
-      products.push(p);
-    }
-    if (products.length > 0) {
-      allProducts = products;
+    const data = await res.json();
+    if (data.length > 0) {
+      allProducts = data;  // image field included if present
       if (!background) init();
       else renderAll();
     }
@@ -312,10 +301,34 @@ td{padding:6px 8px;border-bottom:1px solid #eee}
 <div class="sig-box">Ordered by: _____________________ Date: _________</div>
 <div class="sig-box">Received by: _____________________ Date: _________</div></div><br>
 <button onclick="window.print()" style="padding:10px 24px;background:#e63329;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:bold;cursor:pointer">🖨 Print / Save PDF</button>
+
+<div id="img-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div style="background:#fff;border-radius:8px;padding:16px;max-width:500px;width:95%;text-align:center">
+    <img id="img-modal-src" src="" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:4px">
+    <div id="img-modal-name" style="margin-top:10px;font-weight:bold;font-size:14px"></div>
+    <button class="btn btn-dark" style="margin-top:12px" onclick="document.getElementById('img-modal').classList.remove('show')">✕ Close</button>
+  </div>
+</div>
 </body></html>`);
   w.document.close();
 }
 
 loadProducts();
+
+// Image lightbox
+function showImg(url, name) {
+  document.getElementById('img-modal-src').src = url;
+  document.getElementById('img-modal-name').textContent = name;
+  document.getElementById('img-modal').classList.add('show');
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') document.getElementById('img-modal').classList.remove('show'); });
 </script>
+
+<div id="img-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div style="background:#fff;border-radius:8px;padding:16px;max-width:500px;width:95%;text-align:center">
+    <img id="img-modal-src" src="" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:4px">
+    <div id="img-modal-name" style="margin-top:10px;font-weight:bold;font-size:14px"></div>
+    <button class="btn btn-dark" style="margin-top:12px" onclick="document.getElementById('img-modal').classList.remove('show')">✕ Close</button>
+  </div>
+</div>
 </body></html>
