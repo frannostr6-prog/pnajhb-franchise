@@ -316,38 +316,46 @@ td{padding:6px 8px;border-bottom:1px solid #eee}
 }
 
 function exportExcel() {
-  // Build CSV with BOM for Excel to open correctly with formatting
-  const items = Object.keys(quantities).map(id => {
-    const p = allProducts.find(x => x.id === id);
-    return p ? {...p, qty: quantities[id]} : null;
-  }).filter(Boolean).sort((a,b) => a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
+  const searchVal = document.getElementById('search').value.toLowerCase();
 
-  if (!items.length) { alert('No items selected. Add quantities first.'); return; }
+  // Get only visible products (respects current category + search filter)
+  const visible = allProducts.filter(p => {
+    if (currentCat !== 'All' && p.category !== currentCat) return false;
+    if (searchVal && !p.name.toLowerCase().includes(searchVal) && !String(p.code).includes(searchVal)) return false;
+    return true;
+  });
 
-  // Group by category
+  // Only include ones with quantities set
+  const items = visible.map(p => quantities[p.id] ? {...p, qty: quantities[p.id]} : null)
+    .filter(Boolean)
+    .sort((a,b) => a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
+
+  if (!items.length) {
+    alert('No items with quantities in the current view. Add quantities first.');
+    return;
+  }
+
   const cats = [...new Set(items.map(i => i.category))];
   let rows = [];
 
-  // Title row
-  rows.push(['PNA JHB FRANCHISE — ORDER SHEET','','','','','','']);
-  rows.push(['Date: ' + new Date().toLocaleDateString('en-ZA'),'','','','','','']);
-  rows.push(['','','','','','','']);
+  rows.push(['PNA JHB FRANCHISE — ORDER SHEET','','','','']);
+  rows.push(['Date: ' + new Date().toLocaleDateString('en-ZA'),'','','','']);
+  if (currentCat !== 'All') rows.push(['Category filter: ' + currentCat,'','','','']);
+  rows.push(['','','','','']);
 
   cats.forEach(cat => {
-    rows.push([cat.toUpperCase(),'','','','','','']);
-    rows.push(['Code','Description','RRP (incl VAT)','Qty','Line Total (RRP)','','']);
+    rows.push([cat.toUpperCase(),'','','','']);
+    rows.push(['Code','Description','RRP (incl VAT)','Qty','Line Total (RRP)']);
     items.filter(i => i.category === cat).forEach(i => {
-      rows.push([i.code, i.name, 'R ' + Number(i.rrp).toFixed(2), i.qty, 'R ' + (i.qty * i.rrp).toFixed(2),'','']);
+      rows.push([i.code, i.name, 'R ' + Number(i.rrp).toFixed(2), i.qty, 'R ' + (i.qty * i.rrp).toFixed(2)]);
     });
-    rows.push(['','','','','','','']);
+    rows.push(['','','','','']);
   });
 
-  // Grand total
   const grandTotal = items.reduce((s,i) => s + i.qty * i.rrp, 0);
   const totalUnits = items.reduce((s,i) => s + i.qty, 0);
-  rows.push(['TOTAL','',''  , totalUnits + ' units', 'R ' + grandTotal.toFixed(2),'','']);
+  rows.push(['TOTAL','', '', totalUnits + ' units', 'R ' + grandTotal.toFixed(2)]);
 
-  // Convert to CSV with proper escaping
   const csv = '\uFEFF' + rows.map(r =>
     r.map(cell => {
       const s = String(cell);
@@ -358,7 +366,7 @@ function exportExcel() {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'PNA_Order_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.download = 'PNA_Order_' + new Date().toISOString().slice(0,10) + (currentCat !== 'All' ? '_' + currentCat.replace(/\s+/g,'_') : '') + '.csv';
   a.click();
 }
 
