@@ -316,58 +316,102 @@ td{padding:6px 8px;border-bottom:1px solid #eee}
 }
 
 function exportExcel() {
-  const searchVal = document.getElementById('search').value.toLowerCase();
+  // Get all unique categories from products
+  const allCats = [...new Set(allProducts.map(p => p.category))].sort();
+  if (!allCats.length) { alert('No products loaded.'); return; }
 
-  // Get only visible products (respects current category + search filter)
-  const visible = allProducts.filter(p => {
-    if (currentCat !== 'All' && p.category !== currentCat) return false;
-    if (searchVal && !p.name.toLowerCase().includes(searchVal) && !String(p.code).includes(searchVal)) return false;
-    return true;
-  });
+  // Build the popup HTML
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
 
-  // Only include ones with quantities set
-  const items = visible.map(p => quantities[p.id] ? {...p, qty: quantities[p.id]} : null)
-    .filter(Boolean)
-    .sort((a,b) => a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:10px;padding:28px 32px;max-width:460px;width:95%;box-shadow:0 8px 40px rgba(0,0,0,.35);font-family:Arial,sans-serif';
 
-  if (!items.length) {
-    alert('No items with quantities in the current view. Add quantities first.');
-    return;
-  }
+  box.innerHTML = `
+    <h2 style="margin:0 0 6px;font-size:18px;color:#1a1a1a">📊 Export Ordering Catalogue</h2>
+    <p style="margin:0 0 18px;font-size:13px;color:#666">Select the categories to include in the Excel/CSV export. Franchisees fill in the <strong>Order Qty</strong> column and return the sheet.</p>
+    <div style="margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:10px;font-weight:bold;font-size:14px;cursor:pointer;padding:8px;background:#f0f0f0;border-radius:5px">
+        <input type="checkbox" id="cat-all" style="width:18px;height:18px;cursor:pointer" checked>
+        All Categories
+      </label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:20px" id="cat-list">
+      ${allCats.map(c => `
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 8px;border:1px solid #ddd;border-radius:4px">
+          <input type="checkbox" class="cat-cb" value="${c}" style="width:16px;height:16px;cursor:pointer" checked>
+          ${c}
+        </label>`).join('')}
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button id="cat-cancel" style="padding:9px 22px;background:#eee;border:none;border-radius:5px;font-size:14px;cursor:pointer">Cancel</button>
+      <button id="cat-export" style="padding:9px 22px;background:#1d6f42;color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:bold;cursor:pointer">⬇ Download CSV</button>
+    </div>
+  `;
 
-  const cats = [...new Set(items.map(i => i.category))];
-  let rows = [];
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
 
-  rows.push(['PNA JHB FRANCHISE — ORDER SHEET','','','','']);
-  rows.push(['Date: ' + new Date().toLocaleDateString('en-ZA'),'','','','']);
-  if (currentCat !== 'All') rows.push(['Category filter: ' + currentCat,'','','','']);
-  rows.push(['','','','','']);
+  // All categories toggle
+  const allCb = box.querySelector('#cat-all');
+  const cbs = box.querySelectorAll('.cat-cb');
+  allCb.addEventListener('change', () => cbs.forEach(cb => cb.checked = allCb.checked));
+  cbs.forEach(cb => cb.addEventListener('change', () => {
+    allCb.checked = [...cbs].every(c => c.checked);
+  }));
 
-  cats.forEach(cat => {
-    rows.push([cat.toUpperCase(),'','','','']);
-    rows.push(['Code','Description','RRP (incl VAT)','Qty','Line Total (RRP)']);
-    items.filter(i => i.category === cat).forEach(i => {
-      rows.push([i.code, i.name, 'R ' + Number(i.rrp).toFixed(2), i.qty, 'R ' + (i.qty * i.rrp).toFixed(2)]);
+  box.querySelector('#cat-cancel').addEventListener('click', () => document.body.removeChild(overlay));
+
+  box.querySelector('#cat-export').addEventListener('click', () => {
+    const selected = [...cbs].filter(c => c.checked).map(c => c.value);
+    if (!selected.length) { alert('Please select at least one category.'); return; }
+
+    // Build CSV — ALL products in selected categories (not filtered by quantities)
+    const exportProducts = allProducts
+      .filter(p => selected.includes(p.category))
+      .sort((a,b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+
+    const catLabel = selected.length === allCats.length ? 'All Categories' : selected.join(', ');
+    const rows = [];
+
+    rows.push(['PNA JHB FRANCHISE — ORDERING CATALOGUE', '', '', '', '', '']);
+    rows.push(['Generated: ' + new Date().toLocaleDateString('en-ZA'), '', '', '', '', '']);
+    rows.push(['Categories: ' + catLabel, '', '', '', '', '']);
+    rows.push(['', '', '', '', '', '']);
+    rows.push(['INSTRUCTIONS: Fill in the "Order Qty" column and return this sheet to place your order.', '', '', '', '', '']);
+    rows.push(['', '', '', '', '', '']);
+
+    const cats = [...new Set(exportProducts.map(p => p.category))];
+    cats.forEach(cat => {
+      rows.push([cat.toUpperCase(), '', '', '', '', '']);
+      rows.push(['Code', 'Description', 'Category', 'RRP (incl VAT)', 'Order Qty', 'Notes']);
+      exportProducts.filter(p => p.category === cat).forEach(p => {
+        rows.push([p.code, p.name, p.category, 'R ' + Number(p.rrp||0).toFixed(2), '', '']);
+      });
+      rows.push(['', '', '', '', '', '']);
     });
-    rows.push(['','','','','']);
+
+    rows.push(['', '', '', '', '', '']);
+    rows.push(['Total products: ' + exportProducts.length, '', '', '', '', '']);
+
+    const csv = '\uFEFF' + rows.map(r =>
+      r.map(cell => {
+        const s = String(cell);
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }).join(',')
+    ).join('\r\n');
+
+    const filename = 'PNA_OrderSheet_' + new Date().toISOString().slice(0,10) +
+      (selected.length < allCats.length ? '_' + selected.map(s=>s.replace(/\s+/g,'_')).join('-') : '_All') + '.csv';
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+
+    document.body.removeChild(overlay);
   });
-
-  const grandTotal = items.reduce((s,i) => s + i.qty * i.rrp, 0);
-  const totalUnits = items.reduce((s,i) => s + i.qty, 0);
-  rows.push(['TOTAL','', '', totalUnits + ' units', 'R ' + grandTotal.toFixed(2)]);
-
-  const csv = '\uFEFF' + rows.map(r =>
-    r.map(cell => {
-      const s = String(cell);
-      return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
-    }).join(',')
-  ).join('\r\n');
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'PNA_Order_' + new Date().toISOString().slice(0,10) + (currentCat !== 'All' ? '_' + currentCat.replace(/\s+/g,'_') : '') + '.csv';
-  a.click();
 }
 
 loadProducts();
