@@ -438,10 +438,10 @@ async function loadOrders() {
     }
     const map = {};
     rows.forEach(r => {
-      const [ref,franchise,date,category,code,name,qty,rrp,notes] = r;
+      const [ref,franchise,date,category,code,name,qty,rrp,sell,notes] = r;
       if (!ref) return;
-      if (!map[ref]) map[ref] = { ref, franchise, date, notes, items:[] };
-      map[ref].items.push({ category, code, name, qty:Number(qty), rrp:Number(rrp) });
+      if (!map[ref]) map[ref] = { ref, franchise, date, notes: notes||'', items:[] };
+      map[ref].items.push({ category, code, name, qty:Number(qty), rrp:Number(rrp), sell:Number(sell)||0 });
     });
     const orders = Object.values(map).sort((a,b) => b.date.localeCompare(a.date));
     document.getElementById('orders-container').innerHTML = orders.map(o => orderCard(o)).join('');
@@ -462,20 +462,33 @@ function parseCSV(row) {
   return result;
 }
 
+const orderMap = {};
+
 function orderCard(o) {
+  orderMap[o.ref] = o;
   const total = o.items.reduce((s,i) => s + i.qty * i.rrp, 0);
+  const sellTotal = o.items.reduce((s,i) => s + i.qty * (i.sell || 0), 0);
   return `<div class="order-card">
     <div class="order-header" onclick="this.nextElementSibling.classList.toggle('open')">
       <span><strong>${o.ref}</strong> · ${o.franchise} · ${o.date}</span>
-      <span>R ${total.toFixed(2)} ${o.notes?'📝':''} ▾</span>
+      <span>RRP: R ${total.toFixed(2)} ${o.notes?'📝':''} ▾</span>
     </div>
     <div class="order-body">
       ${o.notes ? `<div style="margin-bottom:8px;font-style:italic;color:#555">📝 ${o.notes}</div>` : ''}
       <table class="order-items" style="width:100%;border-collapse:collapse;margin-bottom:8px">
-        <tr><th>Code</th><th>Description</th><th>Category</th><th>Qty</th><th>RRP</th><th>Total</th></tr>
-        ${o.items.map(i=>`<tr><td>${i.code}</td><td>${i.name}</td><td>${i.category}</td><td>${i.qty}</td><td>R ${i.rrp.toFixed(2)}</td><td>R ${(i.qty*i.rrp).toFixed(2)}</td></tr>`).join('')}
+        <tr><th>Code</th><th>Description</th><th>Category</th><th>Qty</th><th>Sell (excl VAT)</th><th>RRP (incl VAT)</th><th>Line Total (RRP)</th></tr>
+        ${o.items.map(i=>`<tr>
+          <td>${i.code}</td><td>${i.name}</td><td>${i.category}</td><td>${i.qty}</td>
+          <td style="color:#1a73e8">R ${(i.sell||0).toFixed(2)}</td>
+          <td>R ${i.rrp.toFixed(2)}</td>
+          <td style="font-weight:bold">R ${(i.qty*i.rrp).toFixed(2)}</td>
+        </tr>`).join('')}
       </table>
-      <button class="btn btn-dark btn-sm" onclick="pickingSlip(${JSON.stringify(o)})">🖨 Picking Slip</button>
+      <div style="text-align:right;font-size:13px;margin-bottom:10px">
+        <span style="margin-right:20px">Sell Total (excl VAT): <strong style="color:#1a73e8">R ${sellTotal.toFixed(2)}</strong></span>
+        <span>RRP Total (incl VAT): <strong>R ${total.toFixed(2)}</strong></span>
+      </div>
+      <button class="btn btn-dark btn-sm" onclick="pickingSlip('${o.ref}')">🖨 Picking Slip</button>
     </div>
   </div>`;
 }
@@ -487,18 +500,46 @@ async function clearOrders() {
   setStatus('orders-status','ok','✅ All orders cleared');
 }
 
-function pickingSlip(o) {
+function pickingSlip(ref) {
+  const o = orderMap[ref];
+  if (!o) return alert('Order not found');
   const total = o.items.reduce((s,i) => s + i.qty * i.rrp, 0);
-  const rows = o.items.map(i=>`<tr><td>${i.code}</td><td>${i.name}</td><td>${i.category}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right">R ${i.rrp.toFixed(2)}</td><td style="text-align:right;font-weight:bold">R ${(i.qty*i.rrp).toFixed(2)}</td></tr>`).join('');
+  const sellTotal = o.items.reduce((s,i) => s + i.qty * (i.sell||0), 0);
+  const rows = o.items.map(i=>`<tr>
+    <td>${i.code}</td><td>${i.name}</td><td>${i.category}</td>
+    <td style="text-align:center">${i.qty}</td>
+    <td style="text-align:right;color:#1a73e8">R ${(i.sell||0).toFixed(2)}</td>
+    <td style="text-align:right">R ${i.rrp.toFixed(2)}</td>
+    <td style="text-align:right;font-weight:bold">R ${(i.qty*i.rrp).toFixed(2)}</td>
+  </tr>`).join('');
   const w = window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html><head><title>Picking Slip — ${o.ref}</title>
-  <style>body{font-family:Arial,sans-serif;padding:24px;max-width:800px;margin:0 auto}h2{margin-bottom:4px}p{margin:2px 0;font-size:13px;color:#555}table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#1a1a1a;color:#fff;padding:8px}td{padding:8px;border-bottom:1px solid #eee;font-size:13px}.total{font-size:15px;font-weight:bold;text-align:right;margin-top:12px}@media print{button{display:none}}</style>
-  </head><body><h2>Picking Slip — ${o.ref}</h2>
-  <p>Franchise: <strong>${o.franchise}</strong> &nbsp;|&nbsp; Date: ${o.date}</p>
-  ${o.notes?`<p>Notes: <em>${o.notes}</em></p>`:''}
-  <table><tr><th>Code</th><th>Description</th><th>Category</th><th>Qty</th><th>RRP</th><th>Total</th></tr>${rows}</table>
-  <div class="total">Order Total: R ${total.toFixed(2)}</div>
-  <br><button onclick="window.print()">🖨 Print / Save PDF</button></body></html>`);
+  <style>
+    body{font-family:Arial,sans-serif;padding:24px;max-width:900px;margin:0 auto}
+    h2{margin-bottom:4px;color:#1a1a1a}
+    .meta{margin:2px 0;font-size:13px;color:#555}
+    table{width:100%;border-collapse:collapse;margin-top:16px}
+    th{background:#1a1a1a;color:#fff;padding:9px 10px;text-align:left;font-size:13px}
+    td{padding:8px 10px;border-bottom:1px solid #eee;font-size:13px}
+    .sell{color:#1a73e8}
+    .totals{margin-top:14px;text-align:right;font-size:14px}
+    .totals span{margin-left:30px}
+    @media print{button{display:none}.no-print{display:none}}
+  </style>
+  </head><body>
+  <h2>Picking Slip — ${o.ref}</h2>
+  <p class="meta">Franchise: <strong>${o.franchise}</strong> &nbsp;|&nbsp; Date: ${o.date}</p>
+  ${o.notes?`<p class="meta">Notes: <em>${o.notes}</em></p>`:''}
+  <table>
+    <tr><th>Code</th><th>Description</th><th>Category</th><th>Qty</th><th>Sell (excl VAT)</th><th>RRP (incl VAT)</th><th>Line Total</th></tr>
+    ${rows}
+  </table>
+  <div class="totals">
+    <span>Sell Total (excl VAT): <strong style="color:#1a73e8">R ${sellTotal.toFixed(2)}</strong></span>
+    <span>RRP Total (incl VAT): <strong>R ${total.toFixed(2)}</strong></span>
+  </div>
+  <br><button onclick="window.print()">🖨 Print / Save PDF</button>
+  </body></html>`);
   w.document.close();
 }
 

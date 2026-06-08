@@ -62,6 +62,7 @@ td.qty-cell input{width:70px;padding:5px;text-align:center;border:1px solid #ccc
     <option value="price-desc">Sort: Price ↓</option>
   </select>
   <button class="btn btn-red" onclick="openReview()">📋 Review Order</button>
+  <button class="btn" style="background:#1d6f42;color:#fff" onclick="exportExcel()">📊 Export to Excel</button>
   <button class="btn btn-dark" onclick="clearAll()">✕ Clear</button>
 </div>
 <div class="cat-tabs" id="cat-tabs"></div>
@@ -312,6 +313,53 @@ td{padding:6px 8px;border-bottom:1px solid #eee}
 </div>
 </body></html>`);
   w.document.close();
+}
+
+function exportExcel() {
+  // Build CSV with BOM for Excel to open correctly with formatting
+  const items = Object.keys(quantities).map(id => {
+    const p = allProducts.find(x => x.id === id);
+    return p ? {...p, qty: quantities[id]} : null;
+  }).filter(Boolean).sort((a,b) => a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
+
+  if (!items.length) { alert('No items selected. Add quantities first.'); return; }
+
+  // Group by category
+  const cats = [...new Set(items.map(i => i.category))];
+  let rows = [];
+
+  // Title row
+  rows.push(['PNA JHB FRANCHISE — ORDER SHEET','','','','','','']);
+  rows.push(['Date: ' + new Date().toLocaleDateString('en-ZA'),'','','','','','']);
+  rows.push(['','','','','','','']);
+
+  cats.forEach(cat => {
+    rows.push([cat.toUpperCase(),'','','','','','']);
+    rows.push(['Code','Description','RRP (incl VAT)','Qty','Line Total (RRP)','','']);
+    items.filter(i => i.category === cat).forEach(i => {
+      rows.push([i.code, i.name, 'R ' + Number(i.rrp).toFixed(2), i.qty, 'R ' + (i.qty * i.rrp).toFixed(2),'','']);
+    });
+    rows.push(['','','','','','','']);
+  });
+
+  // Grand total
+  const grandTotal = items.reduce((s,i) => s + i.qty * i.rrp, 0);
+  const totalUnits = items.reduce((s,i) => s + i.qty, 0);
+  rows.push(['TOTAL','',''  , totalUnits + ' units', 'R ' + grandTotal.toFixed(2),'','']);
+
+  // Convert to CSV with proper escaping
+  const csv = '\uFEFF' + rows.map(r =>
+    r.map(cell => {
+      const s = String(cell);
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(',')
+  ).join('\r\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'PNA_Order_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
 }
 
 loadProducts();
