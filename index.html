@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>PNA JHB – Franchise Order Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f5f5f5;color:#222}
@@ -316,11 +317,10 @@ td{padding:6px 8px;border-bottom:1px solid #eee}
 }
 
 function exportExcel() {
-  // Get all unique categories from products
   const allCats = [...new Set(allProducts.map(p => p.category))].sort();
   if (!allCats.length) { alert('No products loaded.'); return; }
 
-  // Build the popup HTML
+  // ── Category picker overlay ───────────────────────────────────────────────
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
 
@@ -329,7 +329,7 @@ function exportExcel() {
 
   box.innerHTML = `
     <h2 style="margin:0 0 6px;font-size:18px;color:#1a1a1a">📊 Export Ordering Catalogue</h2>
-    <p style="margin:0 0 18px;font-size:13px;color:#666">Select the categories to include in the Excel/CSV export. Franchisees fill in the <strong>Order Qty</strong> column and return the sheet.</p>
+    <p style="margin:0 0 18px;font-size:13px;color:#666">Select categories to include. Franchisees fill in the <strong>Order Qty</strong> column and return the sheet.</p>
     <div style="margin-bottom:14px">
       <label style="display:flex;align-items:center;gap:10px;font-weight:bold;font-size:14px;cursor:pointer;padding:8px;background:#f0f0f0;border-radius:5px">
         <input type="checkbox" id="cat-all" style="width:18px;height:18px;cursor:pointer" checked>
@@ -345,16 +345,15 @@ function exportExcel() {
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button id="cat-cancel" style="padding:9px 22px;background:#eee;border:none;border-radius:5px;font-size:14px;cursor:pointer">Cancel</button>
-      <button id="cat-export" style="padding:9px 22px;background:#1d6f42;color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:bold;cursor:pointer">⬇ Download CSV</button>
+      <button id="cat-export" style="padding:9px 22px;background:#e63329;color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:bold;cursor:pointer">⬇ Download Excel</button>
     </div>
   `;
 
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
-  // All categories toggle
   const allCb = box.querySelector('#cat-all');
-  const cbs = box.querySelectorAll('.cat-cb');
+  const cbs   = box.querySelectorAll('.cat-cb');
   allCb.addEventListener('change', () => cbs.forEach(cb => cb.checked = allCb.checked));
   cbs.forEach(cb => cb.addEventListener('change', () => {
     allCb.checked = [...cbs].every(c => c.checked);
@@ -366,53 +365,250 @@ function exportExcel() {
     const selected = [...cbs].filter(c => c.checked).map(c => c.value);
     if (!selected.length) { alert('Please select at least one category.'); return; }
 
-    // Build CSV — ALL products in selected categories (not filtered by quantities)
-    const exportProducts = allProducts
-      .filter(p => selected.includes(p.category))
-      .sort((a,b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
-
-    const catLabel = selected.length === allCats.length ? 'All Categories' : selected.join(', ');
-    const rows = [];
-
-    rows.push(['PNA JHB FRANCHISE — ORDERING CATALOGUE', '', '', '', '', '']);
-    rows.push(['Generated: ' + new Date().toLocaleDateString('en-ZA'), '', '', '', '', '']);
-    rows.push(['Categories: ' + catLabel, '', '', '', '', '']);
-    rows.push(['', '', '', '', '', '']);
-    rows.push(['INSTRUCTIONS: Fill in the "Order Qty" column and return this sheet to place your order.', '', '', '', '', '']);
-    rows.push(['', '', '', '', '', '']);
-
-    const cats = [...new Set(exportProducts.map(p => p.category))];
-    cats.forEach(cat => {
-      rows.push([cat.toUpperCase(), '', '', '', '', '']);
-      rows.push(['Code', 'Description', 'Category', 'RRP (incl VAT)', 'Order Qty', 'Notes']);
-      exportProducts.filter(p => p.category === cat).forEach(p => {
-        rows.push([p.code, p.name, p.category, 'R ' + Number(p.rrp||0).toFixed(2), '', '']);
-      });
-      rows.push(['', '', '', '', '', '']);
-    });
-
-    rows.push(['', '', '', '', '', '']);
-    rows.push(['Total products: ' + exportProducts.length, '', '', '', '', '']);
-
-    const csv = '\uFEFF' + rows.map(r =>
-      r.map(cell => {
-        const s = String(cell);
-        return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
-      }).join(',')
-    ).join('\r\n');
-
-    const filename = 'PNA_OrderSheet_' + new Date().toISOString().slice(0,10) +
-      (selected.length < allCats.length ? '_' + selected.map(s=>s.replace(/\s+/g,'_')).join('-') : '_All') + '.csv';
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
-
     document.body.removeChild(overlay);
+    buildPNAExcel(selected);
   });
 }
+
+// ── PNA branded XLSX builder ────────────────────────────────────────────────
+function buildPNAExcel(selectedCats) {
+  // Colours
+  const RED    = 'E63329', DARK = '1A1A1A', WHITE = 'FFFFFF';
+  const LRED   = 'FDECEA', GREY = 'F5F5F5', DGREY = '555555';
+  const GREEN  = '1D6F42', LGREEN = 'E8F5E9', LYELLOW = 'FFFDE7';
+  const LGREY  = 'D9D9D9', BORDER = 'CCCCCC';
+
+  const wb = XLSX.utils.book_new();
+  const ws = {};
+
+  // Helpers
+  const rgb = c => ({ rgb: c });
+  const fill = c => ({ patternType: 'solid', fgColor: rgb(c) });
+  const font = (bold, sz, color, italic) => ({ name:'Arial', bold:!!bold, sz:sz||10, color:rgb(color||DARK), italic:!!italic });
+  const align = (h, v, wrap) => ({ horizontal:h||'left', vertical:v||'center', wrapText:!!wrap });
+  const border = (c) => {
+    const s = { style:'thin', color:rgb(c||BORDER) };
+    return { top:s, bottom:s, left:s, right:s };
+  };
+  const thickBorder = (c) => {
+    const th = { style:'medium', color:rgb(c||RED) };
+    const tn = { style:'thin',   color:rgb(c||RED) };
+    return { top:th, bottom:th, left:th, right:tn };
+  };
+
+  const cell = (v, s) => ({ v, s, t: typeof v === 'number' ? 'n' : 's' });
+
+  // ── Sort products
+  const exportProducts = allProducts
+    .filter(p => selectedCats.includes(p.category))
+    .sort((a,b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+
+  const cats = [...new Set(exportProducts.map(p => p.category))];
+  const today = new Date().toLocaleDateString('en-ZA');
+  const dateISO = new Date().toISOString().slice(0,10);
+
+  // Track row positions for merge refs
+  const merges = [];
+  let R = 0; // 0-indexed row
+
+  function setCell(col, row, v, s, t) {
+    const addr = XLSX.utils.encode_cell({c:col, r:row});
+    ws[addr] = { v, s, t: t || (typeof v === 'number' ? 'n' : 's') };
+  }
+
+  function mergeRow(r, c1, c2) {
+    merges.push({ s:{r,c:c1}, e:{r,c:c2} });
+  }
+
+  // ── ROW 0: Dark banner ────────────────────────────────────────────────────
+  const bannerStyle = { fill:fill(DARK), font:font(false,11,WHITE), alignment:align('right','center') };
+  setCell(0, R, `PNA JHB FRANCHISE  |  ORDERING CATALOGUE  |  Generated: ${today}`, bannerStyle);
+  for(let c=1;c<=5;c++) setCell(c, R, '', bannerStyle);
+  mergeRow(R, 0, 5);
+  R++;
+
+  // ── ROW 1: Red stripe ─────────────────────────────────────────────────────
+  const stripeStyle = { fill:fill(RED) };
+  for(let c=0;c<=5;c++) setCell(c, R, '', stripeStyle);
+  mergeRow(R, 0, 5);
+  R++;
+
+  // ── ROW 2: Title ──────────────────────────────────────────────────────────
+  const titleStyle = { fill:fill(DARK), font:font(true,18,WHITE), alignment:align('center','center') };
+  setCell(0, R, 'FRANCHISE ORDERING CATALOGUE', titleStyle);
+  for(let c=1;c<=5;c++) setCell(c, R, '', titleStyle);
+  mergeRow(R, 0, 5);
+  R++;
+
+  // ── ROW 3: Subtitle ───────────────────────────────────────────────────────
+  const subStyle = { fill:fill(LRED), font:font(false,11,RED,true), alignment:align('center','center') };
+  setCell(0, R, 'Complete the ORDER QTY column and return to your Area Manager', subStyle);
+  for(let c=1;c<=5;c++) setCell(c, R, '', subStyle);
+  mergeRow(R, 0, 5);
+  R++;
+
+  // ── ROW 4: Franchise Name ─────────────────────────────────────────────────
+  const labelStyle = { fill:fill(GREY), font:font(true,10,DARK), alignment:align('left','center'), border:border() };
+  const inputStyle = { fill:fill(WHITE), font:font(false,10,DARK), alignment:align('left','center'), border:{ top:{style:'medium',color:rgb(RED)}, bottom:{style:'medium',color:rgb(RED)}, left:{style:'medium',color:rgb(RED)}, right:{style:'medium',color:rgb(RED)} } };
+  setCell(0, R, 'Franchise Name:', labelStyle);
+  setCell(1, R, '', labelStyle);
+  setCell(2, R, '', labelStyle);
+  mergeRow(R, 0, 2);
+  setCell(3, R, '', inputStyle);
+  setCell(4, R, '', inputStyle);
+  setCell(5, R, '', inputStyle);
+  mergeRow(R, 3, 5);
+  R++;
+
+  // ── ROW 5: Order Date ─────────────────────────────────────────────────────
+  setCell(0, R, 'Order Date:', labelStyle);
+  setCell(1, R, '', labelStyle);
+  setCell(2, R, '', labelStyle);
+  mergeRow(R, 0, 2);
+  const dateStyle = { fill:fill(WHITE), font:font(false,10,DARK), alignment:align('left','center'), border:border() };
+  setCell(3, R, today, dateStyle);
+  setCell(4, R, '', dateStyle);
+  setCell(5, R, '', dateStyle);
+  mergeRow(R, 3, 5);
+  R++;
+
+  // ── ROW 6: Spacer ─────────────────────────────────────────────────────────
+  for(let c=0;c<=5;c++) setCell(c, R, '', {fill:fill(WHITE)});
+  R++;
+
+  // ── ROW 7: Column headers ─────────────────────────────────────────────────
+  const HEADERS = ['Code','Description','Category','RRP (incl VAT)','Order Qty','Notes'];
+  const hStyle = { fill:fill(RED), font:font(true,11,WHITE), alignment:align('center','center',true), border:{ top:{style:'thin',color:rgb(WHITE)}, bottom:{style:'medium',color:rgb(DARK)}, left:{style:'thin',color:rgb(WHITE)}, right:{style:'thin',color:rgb(WHITE)} } };
+  HEADERS.forEach((h,c) => setCell(c, R, h, hStyle));
+  R++;
+
+  // ── DATA rows per category ────────────────────────────────────────────────
+  const dataStartRow = R;
+
+  cats.forEach(cat => {
+    // Category header row
+    const chStyle = {
+      fill: fill(DARK),
+      font: font(true,11,WHITE),
+      alignment: align('left','center'),
+      border: { left:{style:'thick',color:rgb(RED)}, right:{style:'thin',color:rgb(DARK)}, top:{style:'thin',color:rgb(DARK)}, bottom:{style:'thin',color:rgb(DARK)} }
+    };
+    setCell(0, R, `  ▶  ${cat.toUpperCase()}`, chStyle);
+    for(let c=1;c<=5;c++) setCell(c, R, '', chStyle);
+    mergeRow(R, 0, 5);
+    R++;
+
+    const catStartRow = R;
+    const catProducts = exportProducts.filter(p => p.category === cat);
+
+    catProducts.forEach((p, i) => {
+      const even = i % 2 === 0;
+      const bg = even ? WHITE : GREY;
+      const bdr = border();
+
+      // Code
+      setCell(0, R, p.code, { fill:fill(bg), font:font(false,10,DGREY), alignment:align('center','center'), border:bdr });
+      // Description
+      setCell(1, R, p.name, { fill:fill(bg), font:font(false,10,DARK), alignment:align('left','center'), border:bdr });
+      // Category
+      setCell(2, R, p.category, { fill:fill(bg), font:font(false,10,DGREY,true), alignment:align('center','center'), border:bdr });
+      // RRP
+      const rrpCell = { v: Number(p.rrp)||0, s:{ fill:fill(bg), font:font(true,10,'1A5E1A'), alignment:align('right','center'), border:bdr }, t:'n' };
+      const addr = XLSX.utils.encode_cell({c:3,r:R});
+      ws[addr] = rrpCell;
+      ws[addr].z = '"R "#,##0.00';
+      // Order Qty input cell
+      setCell(4, R, '', { fill:fill(LGREEN), font:font(true,11,GREEN), alignment:align('center','center'), border:{ top:{style:'thin',color:rgb(GREEN)}, bottom:{style:'thin',color:rgb(GREEN)}, left:{style:'medium',color:rgb(GREEN)}, right:{style:'medium',color:rgb(GREEN)} } });
+      // Notes
+      setCell(5, R, '', { fill:fill(LYELLOW), font:font(false,10,DARK), alignment:align('left','center'), border:border('E6C800') });
+      R++;
+    });
+
+    // Subtotal row
+    const subRowStyle = { fill:fill(LRED), font:font(false,10,RED,true), alignment:align('left','center'), border:border() };
+    setCell(0, R, `  ${cat} — ${catProducts.length} item${catProducts.length!==1?'s':''}`, subRowStyle);
+    setCell(1, R, '', subRowStyle);
+    setCell(2, R, '', subRowStyle);
+    mergeRow(R, 0, 2);
+    setCell(3, R, '', { fill:fill(LRED), border:border() });
+
+    const qtySubAddr = XLSX.utils.encode_cell({c:4, r:R});
+    ws[qtySubAddr] = {
+      v: 0,
+      f: `SUM(E${catStartRow+1}:E${R})`,
+      s: { fill:fill(LRED), font:font(true,10,RED), alignment:align('center','center'), border:{ top:{style:'thin',color:rgb(RED)}, bottom:{style:'thin',color:rgb(RED)}, left:{style:'medium',color:rgb(RED)}, right:{style:'medium',color:rgb(RED)} } },
+      t: 'n'
+    };
+    setCell(5, R, '', { fill:fill(LRED), border:border() });
+    R++;
+    R++; // gap
+  });
+
+  // ── Grand Total row ───────────────────────────────────────────────────────
+  const gtLabelStyle = {
+    fill: fill(DARK), font: font(true,12,WHITE), alignment: align('left','center'),
+    border: { left:{style:'thick',color:rgb(RED)}, right:{style:'thin',color:rgb(DARK)}, top:{style:'medium',color:rgb(RED)}, bottom:{style:'medium',color:rgb(RED)} }
+  };
+  setCell(0, R, '  GRAND TOTAL — ALL ITEMS ORDERED', gtLabelStyle);
+  setCell(1, R, '', gtLabelStyle);
+  setCell(2, R, '', gtLabelStyle);
+  mergeRow(R, 0, 2);
+  setCell(3, R, '', { fill:fill(DARK), border:{ top:{style:'medium',color:rgb(RED)}, bottom:{style:'medium',color:rgb(RED)}, left:{style:'thin',color:rgb(DARK)}, right:{style:'thin',color:rgb(DARK)} } });
+
+  const gtAddr = XLSX.utils.encode_cell({c:4, r:R});
+  ws[gtAddr] = {
+    v: 0,
+    f: `SUM(E${dataStartRow+1}:E${R})`,
+    s: { fill:fill(RED), font:font(true,14,WHITE), alignment:align('center','center'), border:{ top:{style:'thick',color:rgb(WHITE)}, bottom:{style:'thick',color:rgb(WHITE)}, left:{style:'thick',color:rgb(WHITE)}, right:{style:'thick',color:rgb(WHITE)} } },
+    t: 'n'
+  };
+  setCell(5, R, '', { fill:fill(DARK), border:{ top:{style:'medium',color:rgb(RED)}, bottom:{style:'medium',color:rgb(RED)}, left:{style:'thin',color:rgb(DARK)}, right:{style:'thick',color:rgb(RED)} } });
+  R+=2;
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  const ftStyle = { fill:fill(DARK), font:font(false,9,LGREY,true), alignment:align('center','center') };
+  setCell(0, R, 'PNA JHB Franchise  •  All prices are RRP inclusive of VAT  •  Prices subject to change without notice', ftStyle);
+  for(let c=1;c<=5;c++) setCell(c, R, '', ftStyle);
+  mergeRow(R, 0, 5);
+
+  // ── Sheet metadata ────────────────────────────────────────────────────────
+  ws['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:R,c:5} });
+  ws['!merges'] = merges;
+
+  ws['!cols'] = [
+    { wch: 14 },  // Code
+    { wch: 44 },  // Description
+    { wch: 18 },  // Category
+    { wch: 18 },  // RRP
+    { wch: 14 },  // Order Qty
+    { wch: 22 }   // Notes
+  ];
+
+  // Row heights
+  ws['!rows'] = [];
+  ws['!rows'][0] = { hpt: 60 };   // banner
+  ws['!rows'][1] = { hpt: 10 };   // stripe
+  ws['!rows'][2] = { hpt: 36 };   // title
+  ws['!rows'][3] = { hpt: 22 };   // subtitle
+  ws['!rows'][4] = { hpt: 22 };   // franchise row
+  ws['!rows'][5] = { hpt: 22 };   // date row
+  ws['!rows'][7] = { hpt: 26 };   // headers
+
+  // Print setup
+  ws['!pageSetup'] = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+  ws['!printTitles'] = { rows: { min: 1, max: 8 } };
+  ws['!freeze'] = { xSplit: 0, ySplit: 8 };
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Order Sheet');
+
+  const suffix = selectedCats.length < allCats.length
+    ? '_' + selectedCats.map(s => s.replace(/\s+/g,'_')).join('-')
+    : '_All';
+  XLSX.writeFile(wb, `PNA_OrderSheet_${dateISO}${suffix}.xlsx`);
+}
+
+// ── helper: allCats used inside buildPNAExcel ─────────────────────────────
+// accessed via allProducts in closure, so no extra declaration needed
 
 loadProducts();
 
