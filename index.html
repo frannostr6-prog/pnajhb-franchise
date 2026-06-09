@@ -317,10 +317,11 @@ td{padding:6px 8px;border-bottom:1px solid #eee}
 }
 
 function exportExcel() {
+  // Get all unique categories from products
   const allCats = [...new Set(allProducts.map(p => p.category))].sort();
   if (!allCats.length) { alert('No products loaded.'); return; }
 
-  // ── Category picker overlay ───────────────────────────────────────────────
+  // Build the popup HTML
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
 
@@ -329,7 +330,7 @@ function exportExcel() {
 
   box.innerHTML = `
     <h2 style="margin:0 0 6px;font-size:18px;color:#1a1a1a">📊 Export Ordering Catalogue</h2>
-    <p style="margin:0 0 18px;font-size:13px;color:#666">Select categories to include. Franchisees fill in the <strong>Order Qty</strong> column and return the sheet.</p>
+    <p style="margin:0 0 18px;font-size:13px;color:#666">Select the categories to include in the Excel/CSV export. Franchisees fill in the <strong>Order Qty</strong> column and return the sheet.</p>
     <div style="margin-bottom:14px">
       <label style="display:flex;align-items:center;gap:10px;font-weight:bold;font-size:14px;cursor:pointer;padding:8px;background:#f0f0f0;border-radius:5px">
         <input type="checkbox" id="cat-all" style="width:18px;height:18px;cursor:pointer" checked>
@@ -345,15 +346,16 @@ function exportExcel() {
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button id="cat-cancel" style="padding:9px 22px;background:#eee;border:none;border-radius:5px;font-size:14px;cursor:pointer">Cancel</button>
-      <button id="cat-export" style="padding:9px 22px;background:#e63329;color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:bold;cursor:pointer">⬇ Download Excel</button>
+      <button id="cat-export" style="padding:9px 22px;background:#1d6f42;color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:bold;cursor:pointer">⬇ Download Excel</button>
     </div>
   `;
 
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
+  // All categories toggle
   const allCb = box.querySelector('#cat-all');
-  const cbs   = box.querySelectorAll('.cat-cb');
+  const cbs = box.querySelectorAll('.cat-cb');
   allCb.addEventListener('change', () => cbs.forEach(cb => cb.checked = allCb.checked));
   cbs.forEach(cb => cb.addEventListener('change', () => {
     allCb.checked = [...cbs].every(c => c.checked);
@@ -364,7 +366,6 @@ function exportExcel() {
   box.querySelector('#cat-export').addEventListener('click', () => {
     const selected = [...cbs].filter(c => c.checked).map(c => c.value);
     if (!selected.length) { alert('Please select at least one category.'); return; }
-
     document.body.removeChild(overlay);
     buildPNAExcel(selected);
   });
@@ -609,6 +610,7 @@ function buildPNAExcel(selectedCats) {
 
 // ── helper: allCats used inside buildPNAExcel ─────────────────────────────
 // accessed via allProducts in closure, so no extra declaration needed
+
 
 loadProducts();
 
