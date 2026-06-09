@@ -197,8 +197,13 @@ function renderTable() {
 
   document.getElementById('table-body').innerHTML = products.map(p => {
     const qty = quantities[p.id] || '';
-    const imgCell = p.image
-      ? `<td style="text-align:center;padding:4px"><img src="${p.image}" referrerpolicy="no-referrer" style="width:56px;height:56px;object-fit:contain;cursor:pointer;border-radius:4px" onclick="showImg('${p.image}','${p.name.replace(/'/g,"\\'")}')" onerror="this.style.display='none';this.nextSibling.style.display='block'"><span style="display:none;color:#bbb;font-size:11px">No img</span></td>`
+    // Convert lh3 Drive URLs to thumbnail format (=s120 = 120px, reliable serving)
+    const imgSrc = p.image
+      ? (p.image.includes('lh3.googleusercontent.com') && !p.image.includes('=s')
+          ? p.image + '=s120' : p.image)
+      : '';
+    const imgCell = imgSrc
+      ? `<td style="text-align:center;padding:4px"><img src="${imgSrc}" referrerpolicy="no-referrer" crossorigin="anonymous" style="width:56px;height:56px;object-fit:contain;cursor:pointer;border-radius:4px;background:#f5f5f5" onclick="showImg('${p.image}','${p.name.replace(/'/g,"\\'")}')" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\'%3E%3Crect width=\'48\' height=\'48\' fill=\'%23f0f0f0\'/%3E%3Ctext x=\'50%25\' y=\'55%25\' font-size=\'8\' fill=\'%23bbb\' text-anchor=\'middle\' dominant-baseline=\'middle\'%3ENo img%3C/text%3E%3C/svg%3E'"></td>`
       : `<td style="text-align:center;color:#bbb;font-size:11px">No img</td>`;
     return `<tr class="${qty>0?'has-qty':''}">
       ${imgCell}<td>${p.code}</td><td>${p.name}</td><td>${p.category}</td>
@@ -565,7 +570,10 @@ loadProducts();
 
 // Image lightbox
 function showImg(url, name) {
-  document.getElementById('img-modal-src').src = url;
+  // Use larger size for lightbox view
+  const fullUrl = url && url.includes('lh3.googleusercontent.com') && !url.includes('=s')
+    ? url + '=s800' : url;
+  document.getElementById('img-modal-src').src = fullUrl;
   document.getElementById('img-modal-name').textContent = name;
   document.getElementById('img-modal').classList.add('show');
 }
