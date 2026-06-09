@@ -198,7 +198,7 @@ function renderTable() {
   document.getElementById('table-body').innerHTML = products.map(p => {
     const qty = quantities[p.id] || '';
     const imgCell = p.image
-      ? `<td style="text-align:center;padding:4px"><img src="${p.image}" style="width:56px;height:56px;object-fit:contain;cursor:pointer;border-radius:4px" onclick="showImg('${p.image}','${p.name.replace(/'/g,"\\'")}')" onerror="this.style.display='none';this.nextSibling.style.display='block'"><span style="display:none;color:#bbb;font-size:11px">No img</span></td>`
+      ? `<td style="text-align:center;padding:4px"><img src="${p.image}" referrerpolicy="no-referrer" style="width:56px;height:56px;object-fit:contain;cursor:pointer;border-radius:4px" onclick="showImg('${p.image}','${p.name.replace(/'/g,"\\'")}')" onerror="this.style.display='none';this.nextSibling.style.display='block'"><span style="display:none;color:#bbb;font-size:11px">No img</span></td>`
       : `<td style="text-align:center;color:#bbb;font-size:11px">No img</td>`;
     return `<tr class="${qty>0?'has-qty':''}">
       ${imgCell}<td>${p.code}</td><td>${p.name}</td><td>${p.category}</td>
@@ -308,7 +308,7 @@ td{padding:6px 8px;border-bottom:1px solid #eee}
 
 <div id="img-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
   <div style="background:#fff;border-radius:8px;padding:16px;max-width:500px;width:95%;text-align:center">
-    <img id="img-modal-src" src="" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:4px">
+    <img id="img-modal-src" src="" referrerpolicy="no-referrer" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:4px">
     <div id="img-modal-name" style="margin-top:10px;font-weight:bold;font-size:14px"></div>
     <button class="btn btn-dark" style="margin-top:12px" onclick="document.getElementById('img-modal').classList.remove('show')">✕ Close</button>
   </div>
@@ -574,7 +574,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') document.getEle
 
 <div id="img-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
   <div style="background:#fff;border-radius:8px;padding:16px;max-width:500px;width:95%;text-align:center">
-    <img id="img-modal-src" src="" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:4px">
+    <img id="img-modal-src" src="" referrerpolicy="no-referrer" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:4px">
     <div id="img-modal-name" style="margin-top:10px;font-weight:bold;font-size:14px"></div>
     <button class="btn btn-dark" style="margin-top:12px" onclick="document.getElementById('img-modal').classList.remove('show')">✕ Close</button>
   </div>
