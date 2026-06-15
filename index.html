@@ -414,41 +414,41 @@ function buildPNAExcel(selectedCats) {
   // ── ROW 0 – dark banner ───────────────────────────────────────────────────
   const bannerS = { fill: fillSolid(DARK), font: fontStyle(false, 11, WHITE), alignment: alignStyle('right', 'center') };
   sc(0, R, `PNA JHB FRANCHISE  |  ORDERING CATALOGUE  |  Generated: ${today}`, bannerS);
-  for (let c = 1; c <= 5; c++) sc(c, R, '', bannerS);
-  mergeRow(R, 0, 5); R++;
+  for (let c = 1; c <= 6; c++) sc(c, R, '', bannerS);
+  mergeRow(R, 0, 6); R++;
 
   // ── ROW 1 – red stripe ────────────────────────────────────────────────────
   const stripeS = { fill: fillSolid(RED) };
-  for (let c = 0; c <= 5; c++) sc(c, R, '', stripeS);
-  mergeRow(R, 0, 5); R++;
+  for (let c = 0; c <= 6; c++) sc(c, R, '', stripeS);
+  mergeRow(R, 0, 6); R++;
 
   // ── ROW 2 – title ─────────────────────────────────────────────────────────
   const titleS = { fill: fillSolid(DARK), font: fontStyle(true, 18, WHITE), alignment: alignStyle('center', 'center') };
   sc(0, R, 'FRANCHISE ORDERING CATALOGUE', titleS);
-  for (let c = 1; c <= 5; c++) sc(c, R, '', titleS);
-  mergeRow(R, 0, 5); R++;
+  for (let c = 1; c <= 6; c++) sc(c, R, '', titleS);
+  mergeRow(R, 0, 6); R++;
 
   // ── ROW 3 – subtitle ─────────────────────────────────────────────────────
   const subS = { fill: fillSolid(LRED), font: fontStyle(false, 11, RED, true), alignment: alignStyle('center', 'center') };
   sc(0, R, 'Complete the ORDER QTY column and return to your Area Manager', subS);
-  for (let c = 1; c <= 5; c++) sc(c, R, '', subS);
-  mergeRow(R, 0, 5); R++;
+  for (let c = 1; c <= 6; c++) sc(c, R, '', subS);
+  mergeRow(R, 0, 6); R++;
 
   // ── ROW 4 – Franchise Name field ─────────────────────────────────────────
   const labelS = { fill: fillSolid(GREY), font: fontStyle(true, 10, DARK), alignment: alignStyle('left', 'center'), border: thinBorder() };
   const inputS = { fill: fillSolid(WHITE), font: fontStyle(false, 10, DARK), alignment: alignStyle('left', 'center'), border: medBorder(RED) };
   sc(0, R, 'Franchise Name:', labelS); sc(1, R, '', labelS); sc(2, R, '', labelS); mergeRow(R, 0, 2);
-  sc(3, R, '', inputS);               sc(4, R, '', inputS); sc(5, R, '', inputS); mergeRow(R, 3, 5);
+  sc(3, R, '', inputS);               sc(4, R, '', inputS); sc(5, R, '', inputS); sc(6, R, '', inputS); mergeRow(R, 3, 6);
   R++;
 
   // ── ROW 5 – Order Date ───────────────────────────────────────────────────
   const dateS = { fill: fillSolid(WHITE), font: fontStyle(false, 10, DARK), alignment: alignStyle('left', 'center'), border: thinBorder() };
   sc(0, R, 'Order Date:', labelS); sc(1, R, '', labelS); sc(2, R, '', labelS); mergeRow(R, 0, 2);
-  sc(3, R, today, dateS);          sc(4, R, '', dateS);   sc(5, R, '', dateS); mergeRow(R, 3, 5);
+  sc(3, R, today, dateS);          sc(4, R, '', dateS);   sc(5, R, '', dateS); sc(6, R, '', dateS); mergeRow(R, 3, 6);
   R++;
 
   // ── ROW 6 – spacer ───────────────────────────────────────────────────────
-  for (let c = 0; c <= 5; c++) sc(c, R, '', { fill: fillSolid(WHITE) });
+  for (let c = 0; c <= 6; c++) sc(c, R, '', { fill: fillSolid(WHITE) });
   R++;
 
   // ── ROW 7 – column headers ───────────────────────────────────────────────
@@ -458,7 +458,7 @@ function buildPNAExcel(selectedCats) {
     alignment: alignStyle('center', 'center', true),
     border: { top: { style:'thin', color:{rgb:WHITE} }, bottom: { style:'medium', color:{rgb:DARK} }, left: { style:'thin', color:{rgb:WHITE} }, right: { style:'thin', color:{rgb:WHITE} } }
   };
-  ['Code','Description','Category','RRP (incl VAT)','Order Qty','Notes'].forEach((h, c) => sc(c, R, h, hdrS));
+  ['Code','Description','Category','Sell Price (excl VAT)','RRP (incl VAT)','Order Qty','Notes'].forEach((h, c) => sc(c, R, h, hdrS));
   R++;
 
   // ── DATA rows ─────────────────────────────────────────────────────────────
@@ -471,8 +471,8 @@ function buildPNAExcel(selectedCats) {
       border: { left:{style:'thick',color:{rgb:RED}}, right:{style:'thin',color:{rgb:DARK}}, top:{style:'thin',color:{rgb:DARK}}, bottom:{style:'thin',color:{rgb:DARK}} }
     };
     sc(0, R, `  ▶  ${cat.toUpperCase()}`, catHdrS);
-    for (let c = 1; c <= 5; c++) sc(c, R, '', catHdrS);
-    mergeRow(R, 0, 5); R++;
+    for (let c = 1; c <= 6; c++) sc(c, R, '', catHdrS);
+    mergeRow(R, 0, 6); R++;
 
     const catStartRow = R;
     const catProducts = exportProducts.filter(p => p.category === cat);
@@ -483,20 +483,28 @@ function buildPNAExcel(selectedCats) {
       sc(0, R, p.code,     { fill:fillSolid(bg), font:fontStyle(false,10,DGREY), alignment:alignStyle('center','center'), border:bdr });
       sc(1, R, p.name,     { fill:fillSolid(bg), font:fontStyle(false,10,DARK),  alignment:alignStyle('left','center'),   border:bdr });
       sc(2, R, p.category, { fill:fillSolid(bg), font:fontStyle(false,10,DGREY,true), alignment:alignStyle('center','center'), border:bdr });
-      // RRP cell with currency format
-      const rrpAddr = XLSX.utils.encode_cell({ c:3, r:R });
+      // Sell Price (excl VAT) at col 3
+      const sellAddr = XLSX.utils.encode_cell({ c:3, r:R });
+      ws[sellAddr] = {
+        v: Number(p.price) || 0,
+        t: 'n',
+        z: '"R "#,##0.00',
+        s: { fill:fillSolid(bg), font:fontStyle(false,10,'FF1A5E1A'), alignment:alignStyle('right','center'), border:bdr }
+      };
+      // RRP cell at col 4
+      const rrpAddr = XLSX.utils.encode_cell({ c:4, r:R });
       ws[rrpAddr] = {
         v: Number(p.rrp) || 0,
         t: 'n',
         z: '"R "#,##0.00',
         s: { fill:fillSolid(bg), font:fontStyle(true,10,'FF1A5E1A'), alignment:alignStyle('right','center'), border:bdr }
       };
-      // Order Qty input (green)
-      sc(4, R, '', { fill:fillSolid(LGREEN), font:fontStyle(true,11,GREEN), alignment:alignStyle('center','center'),
+      // Order Qty input (green) at col 5
+      sc(5, R, '', { fill:fillSolid(LGREEN), font:fontStyle(true,11,GREEN), alignment:alignStyle('center','center'),
         border:{ top:{style:'thin',color:{rgb:GREEN}}, bottom:{style:'thin',color:{rgb:GREEN}}, left:{style:'medium',color:{rgb:GREEN}}, right:{style:'medium',color:{rgb:GREEN}} }
       });
-      // Notes
-      sc(5, R, '', { fill:fillSolid(LYELLOW), font:fontStyle(false,10,DARK), alignment:alignStyle('left','center'), border:thinBorder('FFE6C800') });
+      // Notes at col 6
+      sc(6, R, '', { fill:fillSolid(LYELLOW), font:fontStyle(false,10,DARK), alignment:alignStyle('left','center'), border:thinBorder('FFE6C800') });
       R++;
     });
 
@@ -505,13 +513,14 @@ function buildPNAExcel(selectedCats) {
     sc(0, R, `  ${cat} — ${catProducts.length} item${catProducts.length!==1?'s':''}`, subRowS);
     sc(1, R, '', subRowS); sc(2, R, '', subRowS); mergeRow(R, 0, 2);
     sc(3, R, '', { fill:fillSolid(LRED), border:thinBorder() });
-    const qtyAddr = XLSX.utils.encode_cell({ c:4, r:R });
+    sc(4, R, '', { fill:fillSolid(LRED), border:thinBorder() });
+    const qtyAddr = XLSX.utils.encode_cell({ c:5, r:R });
     ws[qtyAddr] = {
-      v: 0, f: `SUM(E${catStartRow+1}:E${R})`, t: 'n',
+      v: 0, f: `SUM(F${catStartRow+1}:F${R})`, t: 'n',
       s: { fill:fillSolid(LRED), font:fontStyle(true,10,RED), alignment:alignStyle('center','center'),
            border:{ top:{style:'thin',color:{rgb:RED}}, bottom:{style:'thin',color:{rgb:RED}}, left:{style:'medium',color:{rgb:RED}}, right:{style:'medium',color:{rgb:RED}} } }
     };
-    sc(5, R, '', { fill:fillSolid(LRED), border:thinBorder() });
+    sc(6, R, '', { fill:fillSolid(LRED), border:thinBorder() });
     R++; R++; // gap
   });
 
@@ -523,25 +532,26 @@ function buildPNAExcel(selectedCats) {
   sc(0, R, '  GRAND TOTAL — ALL ITEMS ORDERED', gtLblS);
   sc(1, R, '', gtLblS); sc(2, R, '', gtLblS); mergeRow(R, 0, 2);
   sc(3, R, '', { fill:fillSolid(DARK), border:{ top:{style:'medium',color:{rgb:RED}}, bottom:{style:'medium',color:{rgb:RED}}, left:{style:'thin',color:{rgb:DARK}}, right:{style:'thin',color:{rgb:DARK}} } });
-  const gtAddr = XLSX.utils.encode_cell({ c:4, r:R });
+  sc(4, R, '', { fill:fillSolid(DARK), border:{ top:{style:'medium',color:{rgb:RED}}, bottom:{style:'medium',color:{rgb:RED}}, left:{style:'thin',color:{rgb:DARK}}, right:{style:'thin',color:{rgb:DARK}} } });
+  const gtAddr = XLSX.utils.encode_cell({ c:5, r:R });
   ws[gtAddr] = {
-    v: 0, f: `SUM(E${dataStartRow+1}:E${R})`, t: 'n',
+    v: 0, f: `SUM(F${dataStartRow+1}:F${R})`, t: 'n',
     s: { fill:fillSolid(RED), font:fontStyle(true,14,WHITE), alignment:alignStyle('center','center'),
          border:{ top:{style:'thick',color:{rgb:WHITE}}, bottom:{style:'thick',color:{rgb:WHITE}}, left:{style:'thick',color:{rgb:WHITE}}, right:{style:'thick',color:{rgb:WHITE}} } }
   };
-  sc(5, R, '', { fill:fillSolid(DARK), border:{ top:{style:'medium',color:{rgb:RED}}, bottom:{style:'medium',color:{rgb:RED}}, left:{style:'thin',color:{rgb:DARK}}, right:{style:'thick',color:{rgb:RED}} } });
+  sc(6, R, '', { fill:fillSolid(DARK), border:{ top:{style:'medium',color:{rgb:RED}}, bottom:{style:'medium',color:{rgb:RED}}, left:{style:'thin',color:{rgb:DARK}}, right:{style:'thick',color:{rgb:RED}} } });
   R += 2;
 
   // ── Footer ────────────────────────────────────────────────────────────────
   const ftS = { fill:fillSolid(DARK), font:fontStyle(false,9,LGREY,true), alignment:alignStyle('center','center') };
   sc(0, R, 'PNA JHB Franchise  •  All prices are RRP inclusive of VAT  •  Prices subject to change without notice', ftS);
-  for (let c = 1; c <= 5; c++) sc(c, R, '', ftS);
-  mergeRow(R, 0, 5);
+  for (let c = 1; c <= 6; c++) sc(c, R, '', ftS);
+  mergeRow(R, 0, 6);
 
   // ── Sheet metadata ────────────────────────────────────────────────────────
-  ws['!ref']    = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:R,c:5} });
+  ws['!ref']    = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:R,c:6} });
   ws['!merges'] = merges;
-  ws['!cols']   = [{ wch:14 },{ wch:44 },{ wch:18 },{ wch:18 },{ wch:14 },{ wch:22 }];
+  ws['!cols']   = [{ wch:14 },{ wch:44 },{ wch:16 },{ wch:20 },{ wch:18 },{ wch:14 },{ wch:22 }];
   ws['!rows']   = [];
   ws['!rows'][0] = { hpt:42 };
   ws['!rows'][1] = { hpt:8  };
