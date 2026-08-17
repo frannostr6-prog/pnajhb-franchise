@@ -94,6 +94,7 @@ td.qty-cell input{width:70px;padding:5px;text-align:center;border:1px solid #ccc
     <div style="margin-top:10px;font-weight:bold" id="review-total"></div>
     <div class="modal-footer">
       <button class="btn btn-dark" onclick="closeReview()">← Back</button>
+      <button class="btn" style="background:#1d6f42;color:#fff" onclick="exportReviewExcel()">📊 Export to Excel</button>
       <button class="btn btn-red" onclick="confirmOrder()">✅ Confirm & Download PO</button>
     </div>
   </div>
@@ -574,6 +575,18 @@ function buildPNAExcel(selectedCats) {
   XLSX.writeFile(wb, `PNA_OrderSheet_${dateISO}${suffix}.xlsx`);
 }
 
+// ── Called from the Review Order modal (exports the current cart, pre-order) ─
+function exportReviewExcel() {
+  const franchise = document.getElementById('franchise-name').value.trim() || '';
+  const notes = document.getElementById('order-notes').value.trim();
+  const items = Object.keys(quantities).map(id => {
+    const p = allProducts.find(x => x.id === id);
+    return p ? {...p, qty: quantities[id]} : null;
+  }).filter(Boolean).sort((a,b) => a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
+  if (!items.length) { alert('Please add quantities first.'); return; }
+  buildOrderExcel({ draft:true, orderRef:null, franchise, date:new Date().toLocaleString('en-ZA'), notes, items });
+}
+
 // ── Called from the post-order popup (via window.opener) ────────────────────
 function exportOrderExcel(orderRef) {
   const order = orderExports[orderRef];
@@ -618,10 +631,13 @@ function buildOrderExcel(order) {
   const cats    = [...new Set(exportProducts.map(p => p.category))];
   const today   = new Date().toLocaleDateString('en-ZA');
   const dateISO = new Date().toISOString().slice(0, 10);
+  const isDraft   = !!order.draft;
+  const headLabel = isDraft ? 'ORDER DRAFT' : 'ORDER CONFIRMATION';
+  const refPart   = order.orderRef ? `  |  ${order.orderRef}` : '';
 
   // ── ROW 0 – dark banner ───────────────────────────────────────────────────
   const bannerS = { fill: fillSolid(DARK), font: fontStyle(false, 11, WHITE), alignment: alignStyle('right', 'center') };
-  sc(0, R, `PNA JHB FRANCHISE  |  ORDER CONFIRMATION  |  ${order.orderRef}  |  Generated: ${today}`, bannerS);
+  sc(0, R, `PNA JHB FRANCHISE  |  ${headLabel}${refPart}  |  Generated: ${today}`, bannerS);
   for (let c = 1; c <= 6; c++) sc(c, R, '', bannerS);
   mergeRow(R, 0, 6); R++;
 
@@ -632,13 +648,13 @@ function buildOrderExcel(order) {
 
   // ── ROW 2 – title ─────────────────────────────────────────────────────────
   const titleS = { fill: fillSolid(DARK), font: fontStyle(true, 18, WHITE), alignment: alignStyle('center', 'center') };
-  sc(0, R, 'FRANCHISE ORDER CONFIRMATION', titleS);
+  sc(0, R, `FRANCHISE ${headLabel}`, titleS);
   for (let c = 1; c <= 6; c++) sc(c, R, '', titleS);
   mergeRow(R, 0, 6); R++;
 
   // ── ROW 3 – subtitle ─────────────────────────────────────────────────────
   const subS = { fill: fillSolid(LRED), font: fontStyle(false, 11, RED, true), alignment: alignStyle('center', 'center') };
-  sc(0, R, 'Review the ORDER QTY column, adjust if needed, and resend to your Area Manager', subS);
+  sc(0, R, isDraft ? 'Adjust the ORDER QTY column as needed, then place your order on the PNA ordering portal' : 'Review the ORDER QTY column, adjust if needed, and resend to your Area Manager', subS);
   for (let c = 1; c <= 6; c++) sc(c, R, '', subS);
   mergeRow(R, 0, 6); R++;
 
@@ -777,7 +793,7 @@ function buildOrderExcel(order) {
   XLSX.utils.book_append_sheet(wb, ws, 'Order');
 
   const safeRef = String(order.orderRef || 'Order').replace(/[^\w-]/g, '');
-  XLSX.writeFile(wb, `PNA_Order_${safeRef}_${dateISO}.xlsx`);
+  XLSX.writeFile(wb, isDraft ? `PNA_OrderDraft_${dateISO}.xlsx` : `PNA_Order_${safeRef}_${dateISO}.xlsx`);
 }
 
 loadProducts();
