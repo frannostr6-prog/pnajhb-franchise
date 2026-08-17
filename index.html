@@ -102,6 +102,7 @@ td.qty-cell input{width:70px;padding:5px;text-align:center;border:1px solid #ccc
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzBP6y4-JIud-5nPZXbhCjrrhhNEZ_ocYNxlO6n0LIGi0C2Y1zR93KK7xoegLK6MB7/exec';
 let allProducts = [];
+let orderExports = {};   // orderRef -> placed order, for post-order Excel export
 let quantities = {};
 let currentCat = 'All';
 let sortKey = 'name';
@@ -272,6 +273,7 @@ function confirmOrder() {
 }
 
 function generatePO({orderRef,franchise,date,notes,items}) {
+  orderExports[orderRef] = {orderRef,franchise,date,notes,items};   // keep for Excel export from the popup
   const cats = [...new Set(items.map(i=>i.category))];
   const sections = cats.map(cat => {
     const rows = items.filter(i=>i.category===cat).map(p =>
@@ -305,6 +307,7 @@ td{padding:6px 8px;border-bottom:1px solid #eee}
 <div class="sig-box">Ordered by: _____________________ Date: _________</div>
 <div class="sig-box">Received by: _____________________ Date: _________</div></div><br>
 <button onclick="window.print()" style="padding:10px 24px;background:#e63329;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:bold;cursor:pointer">🖨 Print / Save PDF</button>
+<button onclick="if(window.opener&&!window.opener.closed){window.opener.exportOrderExcel('${orderRef}')}else{alert('Please export from the main ordering page — this window has lost its connection to it.')}" style="padding:10px 24px;margin-left:10px;background:#1d6f42;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:bold;cursor:pointer">📊 Export to Excel</button>
 
 <div id="img-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
   <div style="background:#fff;border-radius:8px;padding:16px;max-width:500px;width:95%;text-align:center">
@@ -569,6 +572,212 @@ function buildPNAExcel(selectedCats) {
     ? '_' + selectedCats.map(s => s.replace(/\s+/g,'_')).join('-')
     : '_All';
   XLSX.writeFile(wb, `PNA_OrderSheet_${dateISO}${suffix}.xlsx`);
+}
+
+// ── Called from the post-order popup (via window.opener) ────────────────────
+function exportOrderExcel(orderRef) {
+  const order = orderExports[orderRef];
+  if (!order) { alert('That order is no longer available to export. Please place the order again.'); return; }
+  buildOrderExcel(order);
+}
+
+// ── Order-scoped branded XLSX (same layout as buildPNAExcel, Order Qty pre-filled)
+function buildOrderExcel(order) {
+  // ── Colours (ARGB hex, no #) ─────────────────────────────────────────────
+  const RED    = 'FFE63329', DARK = 'FF1A1A1A', WHITE = 'FFFFFFFF';
+  const LRED   = 'FFFDECEA', GREY = 'FFF5F5F5', DGREY = 'FF555555';
+  const GREEN  = 'FF1D6F42', LGREEN = 'FFE8F5E9', LYELLOW = 'FFFDE7AA';
+  const BORDER = 'FFCCCCCC', LGREY = 'FFD9D9D9';
+
+  // ── Style helpers ─────────────────────────────────────────────────────────
+  const fillSolid  = c => ({ patternType: 'solid', fgColor: { rgb: c }, bgColor: { rgb: c } });
+  const fontStyle  = (bold, sz, color, italic) => ({
+    name: 'Arial', bold: !!bold, sz: sz || 10,
+    color: { rgb: color || DARK }, italic: !!italic
+  });
+  const alignStyle = (h, v, wrap) => ({
+    horizontal: h || 'left', vertical: v || 'center', wrapText: !!wrap
+  });
+  const thinBorder = c => { const s = { style: 'thin', color: { rgb: c || BORDER } }; return { top: s, bottom: s, left: s, right: s }; };
+  const medBorder  = c => { const s = { style: 'medium', color: { rgb: c || RED } };  return { top: s, bottom: s, left: s, right: s }; };
+
+  const ws = {};
+  const merges = [];
+  let R = 0;
+
+  function sc(col, row, v, s, t) {
+    const addr = XLSX.utils.encode_cell({ c: col, r: row });
+    ws[addr] = { v, s, t: t || (typeof v === 'number' ? 'n' : 's') };
+  }
+  function mergeRow(r, c1, c2) { merges.push({ s: { r, c: c1 }, e: { r, c: c2 } }); }
+
+  // ── Order products (already grouped/sorted at order time) ─────────────────
+  const exportProducts = order.items.slice()
+    .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+
+  const cats    = [...new Set(exportProducts.map(p => p.category))];
+  const today   = new Date().toLocaleDateString('en-ZA');
+  const dateISO = new Date().toISOString().slice(0, 10);
+
+  // ── ROW 0 – dark banner ───────────────────────────────────────────────────
+  const bannerS = { fill: fillSolid(DARK), font: fontStyle(false, 11, WHITE), alignment: alignStyle('right', 'center') };
+  sc(0, R, `PNA JHB FRANCHISE  |  ORDER CONFIRMATION  |  ${order.orderRef}  |  Generated: ${today}`, bannerS);
+  for (let c = 1; c <= 6; c++) sc(c, R, '', bannerS);
+  mergeRow(R, 0, 6); R++;
+
+  // ── ROW 1 – red stripe ────────────────────────────────────────────────────
+  const stripeS = { fill: fillSolid(RED) };
+  for (let c = 0; c <= 6; c++) sc(c, R, '', stripeS);
+  mergeRow(R, 0, 6); R++;
+
+  // ── ROW 2 – title ─────────────────────────────────────────────────────────
+  const titleS = { fill: fillSolid(DARK), font: fontStyle(true, 18, WHITE), alignment: alignStyle('center', 'center') };
+  sc(0, R, 'FRANCHISE ORDER CONFIRMATION', titleS);
+  for (let c = 1; c <= 6; c++) sc(c, R, '', titleS);
+  mergeRow(R, 0, 6); R++;
+
+  // ── ROW 3 – subtitle ─────────────────────────────────────────────────────
+  const subS = { fill: fillSolid(LRED), font: fontStyle(false, 11, RED, true), alignment: alignStyle('center', 'center') };
+  sc(0, R, 'Review the ORDER QTY column, adjust if needed, and resend to your Area Manager', subS);
+  for (let c = 1; c <= 6; c++) sc(c, R, '', subS);
+  mergeRow(R, 0, 6); R++;
+
+  // ── ROW 4 – Franchise Name field ─────────────────────────────────────────
+  const labelS = { fill: fillSolid(GREY), font: fontStyle(true, 10, DARK), alignment: alignStyle('left', 'center'), border: thinBorder() };
+  const inputS = { fill: fillSolid(WHITE), font: fontStyle(false, 10, DARK), alignment: alignStyle('left', 'center'), border: medBorder(RED) };
+  sc(0, R, 'Franchise Name:', labelS); sc(1, R, '', labelS); sc(2, R, '', labelS); mergeRow(R, 0, 2);
+  sc(3, R, order.franchise || '', inputS); sc(4, R, '', inputS); sc(5, R, '', inputS); sc(6, R, '', inputS); mergeRow(R, 3, 6);
+  R++;
+
+  // ── ROW 5 – Order Date ───────────────────────────────────────────────────
+  const dateS = { fill: fillSolid(WHITE), font: fontStyle(false, 10, DARK), alignment: alignStyle('left', 'center'), border: thinBorder() };
+  sc(0, R, 'Order Date:', labelS); sc(1, R, '', labelS); sc(2, R, '', labelS); mergeRow(R, 0, 2);
+  sc(3, R, order.date || today, dateS); sc(4, R, '', dateS); sc(5, R, '', dateS); sc(6, R, '', dateS); mergeRow(R, 3, 6);
+  R++;
+
+  // ── ROW 6 – spacer ───────────────────────────────────────────────────────
+  for (let c = 0; c <= 6; c++) sc(c, R, '', { fill: fillSolid(WHITE) });
+  R++;
+
+  // ── ROW 7 – column headers ───────────────────────────────────────────────
+  const hdrS = {
+    fill: fillSolid(RED),
+    font: fontStyle(true, 11, WHITE),
+    alignment: alignStyle('center', 'center', true),
+    border: { top: { style:'thin', color:{rgb:WHITE} }, bottom: { style:'medium', color:{rgb:DARK} }, left: { style:'thin', color:{rgb:WHITE} }, right: { style:'thin', color:{rgb:WHITE} } }
+  };
+  ['Code','Description','Category','Sell Price (excl VAT)','RRP (incl VAT)','Order Qty','Notes'].forEach((h, c) => sc(c, R, h, hdrS));
+  R++;
+
+  // ── DATA rows ─────────────────────────────────────────────────────────────
+  const dataStartRow = R;
+
+  cats.forEach(cat => {
+    // Category header
+    const catHdrS = {
+      fill: fillSolid(DARK), font: fontStyle(true, 11, WHITE), alignment: alignStyle('left', 'center'),
+      border: { left:{style:'thick',color:{rgb:RED}}, right:{style:'thin',color:{rgb:DARK}}, top:{style:'thin',color:{rgb:DARK}}, bottom:{style:'thin',color:{rgb:DARK}} }
+    };
+    sc(0, R, `  ▶  ${cat.toUpperCase()}`, catHdrS);
+    for (let c = 1; c <= 6; c++) sc(c, R, '', catHdrS);
+    mergeRow(R, 0, 6); R++;
+
+    const catStartRow = R;
+    const catProducts = exportProducts.filter(p => p.category === cat);
+
+    catProducts.forEach((p, i) => {
+      const bg  = i % 2 === 0 ? WHITE : GREY;
+      const bdr = thinBorder();
+      sc(0, R, p.code,     { fill:fillSolid(bg), font:fontStyle(false,10,DGREY), alignment:alignStyle('center','center'), border:bdr });
+      sc(1, R, p.name,     { fill:fillSolid(bg), font:fontStyle(false,10,DARK),  alignment:alignStyle('left','center'),   border:bdr });
+      sc(2, R, p.category, { fill:fillSolid(bg), font:fontStyle(false,10,DGREY,true), alignment:alignStyle('center','center'), border:bdr });
+      // Sell Price (excl VAT) at col 3
+      const sellAddr = XLSX.utils.encode_cell({ c:3, r:R });
+      ws[sellAddr] = {
+        v: Number(p.price) || 0,
+        t: 'n',
+        z: '"R "#,##0.00',
+        s: { fill:fillSolid(bg), font:fontStyle(false,10,'FF1A5E1A'), alignment:alignStyle('right','center'), border:bdr }
+      };
+      // RRP cell at col 4
+      const rrpAddr = XLSX.utils.encode_cell({ c:4, r:R });
+      ws[rrpAddr] = {
+        v: Number(p.rrp) || 0,
+        t: 'n',
+        z: '"R "#,##0.00',
+        s: { fill:fillSolid(bg), font:fontStyle(true,10,'FF1A5E1A'), alignment:alignStyle('right','center'), border:bdr }
+      };
+      // Order Qty (green, PRE-FILLED with the ordered quantity) at col 5
+      const qtyCellAddr = XLSX.utils.encode_cell({ c:5, r:R });
+      ws[qtyCellAddr] = {
+        v: Number(p.qty) || 0,
+        t: 'n',
+        s: { fill:fillSolid(LGREEN), font:fontStyle(true,11,GREEN), alignment:alignStyle('center','center'),
+          border:{ top:{style:'thin',color:{rgb:GREEN}}, bottom:{style:'thin',color:{rgb:GREEN}}, left:{style:'medium',color:{rgb:GREEN}}, right:{style:'medium',color:{rgb:GREEN}} } }
+      };
+      // Notes at col 6
+      sc(6, R, '', { fill:fillSolid(LYELLOW), font:fontStyle(false,10,DARK), alignment:alignStyle('left','center'), border:thinBorder('FFE6C800') });
+      R++;
+    });
+
+    // Subtotal row
+    const subRowS = { fill:fillSolid(LRED), font:fontStyle(false,10,RED,true), alignment:alignStyle('left','center'), border:thinBorder() };
+    sc(0, R, `  ${cat} — ${catProducts.length} item${catProducts.length!==1?'s':''}`, subRowS);
+    sc(1, R, '', subRowS); sc(2, R, '', subRowS); mergeRow(R, 0, 2);
+    sc(3, R, '', { fill:fillSolid(LRED), border:thinBorder() });
+    sc(4, R, '', { fill:fillSolid(LRED), border:thinBorder() });
+    const qtyAddr = XLSX.utils.encode_cell({ c:5, r:R });
+    ws[qtyAddr] = {
+      v: 0, f: `SUM(F${catStartRow+1}:F${R})`, t: 'n',
+      s: { fill:fillSolid(LRED), font:fontStyle(true,10,RED), alignment:alignStyle('center','center'),
+           border:{ top:{style:'thin',color:{rgb:RED}}, bottom:{style:'thin',color:{rgb:RED}}, left:{style:'medium',color:{rgb:RED}}, right:{style:'medium',color:{rgb:RED}} } }
+    };
+    sc(6, R, '', { fill:fillSolid(LRED), border:thinBorder() });
+    R++; R++; // gap
+  });
+
+  // ── Grand Total row ───────────────────────────────────────────────────────
+  const gtLblS = {
+    fill:fillSolid(DARK), font:fontStyle(true,12,WHITE), alignment:alignStyle('left','center'),
+    border:{ left:{style:'thick',color:{rgb:RED}}, right:{style:'thin',color:{rgb:DARK}}, top:{style:'medium',color:{rgb:RED}}, bottom:{style:'medium',color:{rgb:RED}} }
+  };
+  sc(0, R, '  GRAND TOTAL — ALL ITEMS ORDERED', gtLblS);
+  sc(1, R, '', gtLblS); sc(2, R, '', gtLblS); mergeRow(R, 0, 2);
+  sc(3, R, '', { fill:fillSolid(DARK), border:{ top:{style:'medium',color:{rgb:RED}}, bottom:{style:'medium',color:{rgb:RED}}, left:{style:'thin',color:{rgb:DARK}}, right:{style:'thin',color:{rgb:DARK}} } });
+  sc(4, R, '', { fill:fillSolid(DARK), border:{ top:{style:'medium',color:{rgb:RED}}, bottom:{style:'medium',color:{rgb:RED}}, left:{style:'thin',color:{rgb:DARK}}, right:{style:'thin',color:{rgb:DARK}} } });
+  const gtAddr = XLSX.utils.encode_cell({ c:5, r:R });
+  ws[gtAddr] = {
+    v: 0, f: `SUM(F${dataStartRow+1}:F${R})`, t: 'n',
+    s: { fill:fillSolid(RED), font:fontStyle(true,14,WHITE), alignment:alignStyle('center','center'),
+         border:{ top:{style:'thick',color:{rgb:WHITE}}, bottom:{style:'thick',color:{rgb:WHITE}}, left:{style:'thick',color:{rgb:WHITE}}, right:{style:'thick',color:{rgb:WHITE}} } }
+  };
+  sc(6, R, '', { fill:fillSolid(DARK), border:{ top:{style:'medium',color:{rgb:RED}}, bottom:{style:'medium',color:{rgb:RED}}, left:{style:'thin',color:{rgb:DARK}}, right:{style:'thick',color:{rgb:RED}} } });
+  R += 2;
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  const ftS = { fill:fillSolid(DARK), font:fontStyle(false,9,LGREY,true), alignment:alignStyle('center','center') };
+  sc(0, R, 'PNA JHB Franchise  •  All prices are RRP inclusive of VAT  •  Prices subject to change without notice', ftS);
+  for (let c = 1; c <= 6; c++) sc(c, R, '', ftS);
+  mergeRow(R, 0, 6);
+
+  // ── Sheet metadata ────────────────────────────────────────────────────────
+  ws['!ref']    = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:R,c:6} });
+  ws['!merges'] = merges;
+  ws['!cols']   = [{ wch:14 },{ wch:44 },{ wch:16 },{ wch:20 },{ wch:18 },{ wch:14 },{ wch:22 }];
+  ws['!rows']   = [];
+  ws['!rows'][0] = { hpt:42 };
+  ws['!rows'][1] = { hpt:8  };
+  ws['!rows'][2] = { hpt:34 };
+  ws['!rows'][3] = { hpt:20 };
+  ws['!rows'][4] = { hpt:20 };
+  ws['!rows'][5] = { hpt:20 };
+  ws['!rows'][7] = { hpt:24 };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Order');
+
+  const safeRef = String(order.orderRef || 'Order').replace(/[^\w-]/g, '');
+  XLSX.writeFile(wb, `PNA_Order_${safeRef}_${dateISO}.xlsx`);
 }
 
 loadProducts();
