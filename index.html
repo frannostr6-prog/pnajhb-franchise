@@ -200,7 +200,7 @@ function renderTable() {
   document.getElementById('table-body').innerHTML = products.map(p => {
     const qty = quantities[p.id] || '';
     const imgCell = p.image
-      ? `<td style="text-align:center;padding:4px"><img src="${p.image}" style="width:56px;height:56px;object-fit:contain;cursor:pointer;border-radius:4px" onclick="showImg('${p.image}','${p.name.replace(/'/g,"\\'")}')" ></td>`
+      ? `<td style="text-align:center;padding:4px"><img src="${driveThumb(p.image,300)}" loading="lazy" decoding="async" onerror="retryImg(this)" style="width:56px;height:56px;object-fit:contain;cursor:pointer;border-radius:4px" onclick="showImg('${p.image}','${p.name.replace(/'/g,"\\'")}')" ></td>`
       : `<td style="text-align:center;color:#bbb;font-size:11px">No img</td>`;
     return `<tr class="${qty>0?'has-qty':''}">
       ${imgCell}<td>${p.code}</td><td>${p.name}</td><td>${p.category}</td>
@@ -798,9 +798,24 @@ function buildOrderExcel(order) {
 
 loadProducts();
 
+// Turn any Drive image URL into the reliable lh3 CDN format at a given width
+function driveThumb(url, size){
+  if(!url) return url;
+  var m = String(url).match(/[?&]id=([\w-]+)/)
+       || String(url).match(/googleusercontent\.com\/d\/([\w-]+)/)
+       || String(url).match(/\/file\/d\/([\w-]+)/);
+  return m ? 'https://lh3.googleusercontent.com/d/' + m[1] + '=w' + size : url;
+}
+// Retry a failed image a few times, then hide it quietly
+function retryImg(img){
+  var n = +(img.dataset.retry || 0);
+  if(n < 3){ img.dataset.retry = n+1;
+    setTimeout(function(){ img.src = img.src.split('?')[0] + '?r=' + Date.now(); }, 500*(n+1)); }
+  else { img.onerror = null; img.style.visibility = 'hidden'; }
+}
 // Image lightbox
 function showImg(url, name) {
-  document.getElementById('img-modal-src').src = url;
+  document.getElementById('img-modal-src').src = driveThumb(url, 1200);
   document.getElementById('img-modal-name').textContent = name;
   document.getElementById('img-modal').classList.add('show');
 }
