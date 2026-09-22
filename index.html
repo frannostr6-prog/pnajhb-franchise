@@ -87,8 +87,8 @@ td.qty-cell input{width:70px;padding:5px;text-align:center;border:1px solid #ccc
 <div class="modal-overlay" id="review-modal">
   <div class="modal">
     <h2>📋 Order Review</h2>
-    <div class="form-row"><label>Franchise:</label><input type="text" id="franchise-name" placeholder="Your franchise name"></div>
-    <div class="form-row"><label>Notes:</label><input type="text" id="order-notes" placeholder="e.g. Urgent, deliver by Friday…"></div>
+    <div class="form-row"><label>Franchise:</label><input type="text" id="franchise-name" placeholder="Your franchise name" oninput="saveDraft()"></div>
+    <div class="form-row"><label>Notes:</label><input type="text" id="order-notes" placeholder="e.g. Urgent, deliver by Friday…" oninput="saveDraft()"></div>
     <table><thead><tr><th>Code</th><th>Description</th><th>Category</th><th>RRP</th><th>Qty</th></tr></thead>
     <tbody id="review-body"></tbody></table>
     <div style="margin-top:10px;font-weight:bold" id="review-total"></div>
@@ -108,6 +108,45 @@ let quantities = {};
 let currentCat = 'All';
 let sortKey = 'name';
 let sortDesc = false;
+
+// ── DRAFT PERSISTENCE (survives refresh / tab close / browser restart) ───────
+// Per-device only: a draft saved on a phone won't follow to a store PC.
+const DRAFT_KEY = 'pna_order_draft_v1';
+
+function saveDraft() {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      quantities: quantities,
+      franchise: (document.getElementById('franchise-name') || {}).value || '',
+      notes:     (document.getElementById('order-notes')    || {}).value || '',
+      savedAt:   Date.now()
+    }));
+  } catch (e) { /* storage full or blocked — ignore, draft just won't persist */ }
+}
+
+function loadDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    if (d && d.quantities && typeof d.quantities === 'object') {
+      quantities = d.quantities;
+      return d;
+    }
+  } catch (e) { /* corrupt draft — ignore */ }
+  return null;
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+}
+
+// Restore franchise name + notes into the form (call after the DOM exists)
+function restoreDraftFields(d) {
+  if (!d) return;
+  const fn = document.getElementById('franchise-name');
+  const nt = document.getElementById('order-notes');
+  if (fn && d.franchise) fn.value = d.franchise;
+  if (nt && d.notes)     nt.value = d.notes;
+}
 
 // ── LOAD from Google Sheet (always live) ─────────────────────────────────────
 async function loadProducts() {
@@ -146,8 +185,19 @@ function parseCSVRow(row) {
 }
 
 function init() {
+  const draft = loadDraft();   // pull saved quantities back into `quantities` before we render
+  restoreDraftFields(draft);   // pull franchise name + notes back into the form
   renderCatTabs();
-  renderAll();
+  renderAll();                 // table renders pre-filled: inputs + row highlights come straight from `quantities`
+  if (draft && Object.keys(quantities).length) {
+    const s = document.getElementById('status');
+    if (s) {
+      s.style.display = 'block';
+      s.className = 'status';
+      s.textContent = '✅ Draft restored — your previous quantities are still here. Place the order or Clear All when you\u2019re done.';
+      setTimeout(() => { s.style.display = 'none'; }, 6000);
+    }
+  }
 }
 
 function renderAll() {
@@ -217,6 +267,7 @@ function setQty(input) {
   if (val > 0) quantities[id] = val; else delete quantities[id];
   input.closest('tr').className = val > 0 ? 'has-qty' : '';
   updateSummary();
+  saveDraft();   // persist on every change so nothing is lost on refresh
 }
 
 function updateSummary() {
@@ -231,6 +282,7 @@ function clearAll() {
   document.querySelectorAll('input[data-id]').forEach(i => i.value='');
   document.querySelectorAll('tr.has-qty').forEach(r => r.className='');
   updateSummary();
+  clearDraft();   // also removes the saved draft (so a placed/cleared order doesn't linger as stale)
 }
 
 function openReview() {
